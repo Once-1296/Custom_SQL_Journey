@@ -1,0 +1,110 @@
+// slotted_page.hpp
+#ifndef SLOTTED_PAGE_HPP
+#define SLOTTED_PAGE_HPP
+
+#include<iostream>
+#include <array>
+#include <cstring>
+#include <cstdint>
+#include <cassert>
+
+class SlottedPage {
+private:
+    std::array<uint8_t, 4096> data_buffer_;
+
+    // Static layout definitions
+    static constexpr size_t PAGE_SIZE = 4096;
+    static constexpr size_t SLOT_COUNT_OFFSET = 0;                       // 4 bytes
+    static constexpr size_t FREE_SPACE_OFFSET = sizeof(uint32_t);        // 4 bytes
+    static constexpr size_t HEADER_SIZE = SLOT_COUNT_OFFSET + FREE_SPACE_OFFSET + sizeof(uint32_t); // 8 bytes
+
+    struct [[gnu::packed]] Slot {
+        uint32_t offset_;
+        uint32_t size_;
+        Slot(uint32_t offset=0, uint32_t size=0):offset_(offset), size_(size){}
+    };
+
+public:
+    void Init() {
+        data_buffer_.fill(0);
+        
+        // Initially, there are 0 slots inside this block
+        uint32_t initial_slots = 0;
+        std::memcpy(data_buffer_.data() + SLOT_COUNT_OFFSET, &initial_slots, sizeof(uint32_t));
+
+        // Initialize the free space pointer. 
+        // Because data grows BACKWARD from the absolute end of the page, 
+        // the initial free space pointer should point to byte 4096.
+        uint32_t initial_free_space = PAGE_SIZE;
+        std::memcpy(data_buffer_.data() + FREE_SPACE_OFFSET, &initial_free_space, sizeof(uint32_t));
+    }
+
+    uint32_t GetSlotCount() const {
+        uint32_t count = 0;
+        std::memcpy(&count, data_buffer_.data() + SLOT_COUNT_OFFSET, sizeof(uint32_t));
+        return count;
+    }
+
+    uint32_t GetFreeSpacePointer() const {
+        uint32_t ptr = 0;
+        std::memcpy(&ptr, data_buffer_.data() + FREE_SPACE_OFFSET, sizeof(uint32_t));
+        return ptr;
+    }
+
+    // Tries to insert a raw tuple into the page
+    bool InsertTuple(const uint8_t* tuple_data, uint32_t size, uint32_t* out_slot_num) {
+        uint32_t slot_count = GetSlotCount();
+        uint32_t free_space_ptr = GetFreeSpacePointer();
+        // Calculate space requirements
+        // The space required for a new entry is the size of the raw tuple data PLUS 
+        // the size of one new Slot structure (8 bytes) in the header array.
+        // Calculate the current space used by the header + slots array, and ensure 
+        uint32_t current_header_size = HEADER_SIZE + (sizeof(uint32_t)+sizeof(uint32_t))*slot_count;
+        // that adding this new tuple doesn't cause the slots array to crash into the free_space_ptr.
+        // If it exceeds bounds, return false (Page Full).
+        if(current_header_size + sizeof(uint32_t) + sizeof(uint32_t) > free_space_ptr - size){
+            return false;
+        }
+        // Write data backward
+        // Calculate the new free space pointer location (free_space_ptr - size).
+        // Use std::memcpy to copy 'tuple_data' into this newly claimed memory chunk.
+        free_space_ptr = free_space_ptr - size;
+        std::memcpy(data_buffer_.data() + free_space_ptr, reinterpret_cast<const char*>(tuple_data), size);
+        // Write header slot entries forward
+        // Construct a Slot struct capturing the new offset and size parameters.
+        Slot new_slot(free_space_ptr, size);
+        // std::cout << "Slot Offset: " << new_slot.offset_ << ", Slot Size: " << new_slot.size_ << std::endl; // Debugging line
+
+        // Copy this Slot struct into the slots array position directly after the last slot entry.
+        std::memcpy(data_buffer_.data() +  HEADER_SIZE + (sizeof(uint32_t)+sizeof(uint32_t))*slot_count, reinterpret_cast<const char*>(&new_slot) , sizeof(new_slot));
+        // Update Master Header Properties
+        // Increment slot_count, update the free space pointer memory address, 
+        // assign *out_slot_num = current slot index, and return true.
+        slot_count++;
+        std::memcpy(data_buffer_.data() + SLOT_COUNT_OFFSET, &slot_count, sizeof(uint32_t));
+        std::memcpy(data_buffer_.data() + FREE_SPACE_OFFSET, &free_space_ptr, sizeof(uint32_t));
+        *out_slot_num = GetSlotCount() - 1; 
+        return true;
+    }
+
+    // Zero-copy lookup of data using a slot index
+    const uint8_t* GetTuplePtr(uint32_t slot_num, uint32_t* out_size) const {
+        assert(slot_num < GetSlotCount());
+
+        // Extract Slot metadata properties at slot_num index.
+        // Read the Slot layout out of the header array, assign its size to *out_size,
+        // and return a direct pointer to its starting location inside data_buffer_.
+        Slot slot;
+        std::memcpy(&slot, data_buffer_.data() + HEADER_SIZE + (sizeof(uint32_t)+sizeof(uint32_t))*slot_num, sizeof(slot));
+        // std::cout << "Slot Offset: " << slot.offset_ << ", Slot Size: " << slot.size_ << std::endl; // Debugging line
+        // std::cout << "Header Size " << HEADER_SIZE << std::endl;
+        // std::cout << "Slot address: " << HEADER_SIZE + (sizeof(uint32_t)+sizeof(uint32_t))*slot_num << std::endl;
+        std::memcpy(out_size, &slot.size_, sizeof(uint32_t));
+        return data_buffer_.data() + slot.offset_;
+    }
+
+    const uint8_t* ReadRawData() const { return data_buffer_.data(); }
+    uint8_t* WriteRawData() { return data_buffer_.data(); }
+};
+
+#endif

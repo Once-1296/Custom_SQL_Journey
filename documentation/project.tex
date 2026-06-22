@@ -1,0 +1,103 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    basicstyle=\ttfamily,          % Uses the monospace code font
+    keywordstyle=\color{blue},     % Colors keywords blue
+    commentstyle=\color{green},    % Colors comments green
+    breaklines=true                % Wraps long lines of code
+}
+
+
+\title{Custom SQL Journey Documentation}
+\author{Awwab Wadekar}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+I was bored in my vacation, so I thought why not learn how SQL works under the hood with an attempt on a custom implementation?
+
+This is torture. It was not fun.
+
+Anyways the journey is a 5 phase mess:
+\textit{
+\begin{list}{Phase}\large
+    \item{1.}{The OS background}
+    \item{2.}{The Volcano Model}
+    \item{3.}{The System Catalog}
+    \item{4.}{The Parser Dilemma}
+    \item{5.}{The Editor Interface}
+\end{list}
+}
+\newpage
+
+\textbf{\section{Phase 1: The OS background}}
+
+\subsection{Day 1: Serialsation and Deserialisation}
+
+\paragraph{
+    Data is often stored in Raw Bytes in Memory. So when we fetch it we actually can't use something like struct.id or struct.name to access fields. \newline Instead we use an offset variable to keep track of what we have accessed.
+}
+\paragraph{
+    Another thing is that often times when you use structs or classes, they use additional memory because of padding.
+    To Explain Padding in simple terms, suppose you have a struct as below.
+}
+\begin{lstlisting}[language=C++]
+    struct MyStruct{
+        char name[30];
+        int id;
+    }
+\end{lstlisting}
+\paragraph{
+    Now here the total memory is $30 * 1  + 4 = 34$ bytes, as one char is 1 byte and one int is 4 bytes.
+    \newline But usually the OS assigns Memory in terms of Pages, which here are considered to be 4 bytes in size.
+    So you have Page 1...Page 2...Page 3........Page 8...Page 9.
+    Basically $9 * 4 = 36$ bytes.
+    \newline Wait a minute, what ?
+    I'm not a Mathematics Graduate but surely $36 > 34$.
+    \newline So what actually happened here is padding, in the 8th Page, 2 bytes are used for the last 2 elements of the char array.
+    \newline But we cant exactly put 2 bytes of an int in one page and 2 in another. And we for sure cannot have half a page.
+    So the OS simply pads those 2 bytes up.
+}
+\paragraph{
+    Well how do we fix this? The solution : Interpret everything as raw bytes and track offset of every field.
+    Something along the lines of :
+}  \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    vector<uint8_t> buffer;
+    size_t offset = 0;
+    MyStruct obj;
+    obj.name = "Awwab";
+    obj.id = 77;
+    std::memcpy(buffer.data() + offset, &obj.name, sizeof(obj.name))
+    offset += sizeof(obj.name);
+    std::memcpy(buffer.data() + offset, &obj.id, sizeof(obj.id))
+    offset += sizeof(obj.id);
+\end{lstlisting}
+
+\paragraph{
+    Similarly, Deserialization does the same process, just this time the source and destination are swapped.
+}  \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    vector<uint8_t> buffer;
+    size_t offset = 0;
+    MyStruct obj;
+    std::memcpy(&obj.name, buffer.data() + offset, sizeof(obj.name))
+    offset += sizeof(obj.name);
+    std::memcpy(&obj.id, buffer.data() + offset, sizeof(obj.id))
+    offset += sizeof(obj.id);
+\end{lstlisting}
+
+
+
+\end{document}
