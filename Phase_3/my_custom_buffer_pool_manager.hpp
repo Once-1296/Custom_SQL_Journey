@@ -4,7 +4,7 @@
 #include <unordered_map>
 #include <array>
 #include <cstdint>
-#include "my_custom_page.hpp"         // Your Page class
+#include "slotted_page.hpp"         // Your Page class
 #include "my_custom_disk_manager.hpp" // Your DiskManager class
 #include <list>
 
@@ -34,7 +34,14 @@ public:
     uint32_t cache_misses = 0;
 
     BufferPoolManager(DiskManager &disk) : disk_manager(disk) {}
-
+    ~BufferPoolManager() {
+        // Write back all dirty pages to disk upon destruction
+        for (const auto &entry : page_table) {
+            if (entry.second.is_dirty) {
+                disk_manager.WritePage(entry.first, pool[entry.second.frame_id]);
+            }
+        }
+    }
     void MarkDirty(uint32_t page_id)
     {
         if (page_table.find(page_id) != page_table.end())
@@ -84,6 +91,10 @@ public:
         page_table[page_id] = {frame_to_use, lru_list.begin(), false};
 
         return &pool[frame_to_use];
+    }
+
+    uint32_t NewPage() const {
+        return disk_manager.AllocatePage();
     }
 };
 #endif

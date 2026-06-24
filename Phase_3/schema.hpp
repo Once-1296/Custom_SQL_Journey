@@ -17,7 +17,7 @@ struct Column {
     std::string name;
     TypeId type;
     uint32_t length; // Size in bytes (e.g., 4 for INT32, N for VARCHAR)
-    uint32_t offset; // Pre-calculated byte offset within a tuple
+    uint32_t offset; // Pre-calculated byte offset within a tuple, represents the size of all columns before it
 };
 
 class Schema {
@@ -26,8 +26,8 @@ private:
     uint32_t tuple_size = 0; // Total size of a single row in bytes
 
 public:
-    // Explicitly define a schema by passing a list of columns
-    Schema(const std::vector<Column>& input_columns) : columns(input_columns) {
+    // Explicitly define a schema by passing a list of column
+    Schema(const std::vector<Column>& input_columns = {}) : columns(input_columns) {
         uint32_t current_offset = 0;
         for (auto& col : columns) {
             col.offset = current_offset;

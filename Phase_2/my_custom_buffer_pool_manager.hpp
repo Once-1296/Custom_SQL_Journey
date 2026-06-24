@@ -34,7 +34,14 @@ public:
     uint32_t cache_misses = 0;
 
     BufferPoolManager(DiskManager &disk) : disk_manager(disk) {}
-
+    ~BufferPoolManager() {
+        // Write back all dirty pages to disk upon destruction
+        for (const auto &entry : page_table) {
+            if (entry.second.is_dirty) {
+                disk_manager.WritePage(entry.first, pool[entry.second.frame_id]);
+            }
+        }
+    }
     void MarkDirty(uint32_t page_id)
     {
         if (page_table.find(page_id) != page_table.end())

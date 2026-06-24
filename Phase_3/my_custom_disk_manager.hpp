@@ -5,7 +5,7 @@
 #include <fstream>
 #include <cstdint>
 #include <cassert>
-#include "my_custom_page.hpp"
+#include "slotted_page.hpp"
 
 class DiskManager {
 private:

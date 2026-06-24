@@ -5,7 +5,7 @@
 #include <vector>
 
 void TestSlottedPage() {
-    SlottedPage page;
+    Page page;
     page.Init();
 
     assert(page.GetSlotCount() == 0);
