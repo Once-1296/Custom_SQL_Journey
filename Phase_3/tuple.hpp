@@ -37,6 +37,7 @@ public:
 
     RID GetRID() const { return rid_; }
     const uint8_t *GetData() const { return data_ptr_; }
+    const uint32_t GetSize() const { return size_; }
 
     // Extracts an integer field using the Schema's pre-calculated offset
     int32_t GetInt32(const Schema &schema, uint32_t col_idx) const

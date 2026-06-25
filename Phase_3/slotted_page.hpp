@@ -26,8 +26,12 @@ private:
         Slot(uint32_t offset = 0, uint32_t size = 0) : offset_(offset), size_(size) {}
     };
 
+    // track if defragmented or not
+    bool is_defragmented = true;
+
 public:
-    Page() {
+    Page()
+    {
         Init();
     }
     void Init()
@@ -47,6 +51,8 @@ public:
         // set next_page_id by default to a sentinel value : 0xFFFFFFFF
         uint32_t sentinel_id = 0xFFFFFFFF;
         std::memcpy(data_buffer_.data() + NEXT_PAGE_ID_OFFSET, &sentinel_id, sizeof(uint32_t));
+
+        is_defragmented = true;
     }
 
     uint32_t GetSlotCount() const
@@ -64,11 +70,11 @@ public:
     }
 
     // Tries to insert a raw tuple into the page
+    // future todo -> if dead slot (0,0) claim it for insertion
     bool InsertTuple(const uint8_t *tuple_data, uint32_t size, uint32_t *out_slot_num)
     {
         uint32_t slot_count = GetSlotCount();
         uint32_t free_space_ptr = GetFreeSpacePointer();
-
 
         // std::cout<<"DEBUG : slot count "<<slot_count<<" , Free Space PTR "<<free_space_ptr<<std::endl;
 
@@ -82,9 +88,13 @@ public:
 
         // std::cout<<"DEBUG : LHS "<<current_header_size + sizeof(uint32_t) + sizeof(uint32_t)<<" RHS "<<free_space_ptr - size<<std::endl;
 
-
         if (free_space_ptr < size || current_header_size + sizeof(uint32_t) + sizeof(uint32_t) > free_space_ptr - size)
         {
+            if (!is_defragmented)
+            {
+                Defragment();
+                return InsertTuple(tuple_data, size, out_slot_num);
+            }
             return false;
         }
         // Write data backward
@@ -141,60 +151,111 @@ public:
     }
 
     // Mark a slot as logically deleted by clearing its size field
-    bool ApplyDelete(uint32_t slot_num) {
+    bool ApplyDelete(uint32_t slot_num)
+    {
         uint32_t slot_count = GetSlotCount();
-        if (slot_num >= slot_count) return false;
+        if (slot_num >= slot_count)
+            return false;
 
         // Extract the slot structure at slot_num index.
         // Change its size_ property to 0 to mark it as deleted.
         // Re-serialize the modified slot structure back into its correct offset in the header.
-        uint32_t offset = HEADER_SIZE + slot_num*(sizeof(uint32_t) + sizeof(uint32_t));
+        uint32_t offset = HEADER_SIZE + slot_num * (sizeof(uint32_t) + sizeof(uint32_t));
         Slot slot;
         std::memcpy(&slot, data_buffer_.data() + offset, sizeof(slot));
         slot.size_ = 0;
-        std::memcpy(data_buffer_.data() + offset,reinterpret_cast<const char*>(&slot), sizeof(slot));
+        std::memcpy(data_buffer_.data() + offset, reinterpret_cast<const char *>(&slot), sizeof(slot));
+        is_defragmented = false;
         return true;
     }
 
     // Updates a tuple in place if space permits
-    bool UpdateTuple(uint32_t slot_num, const uint8_t* new_tuple_data, uint32_t new_size) {
+    bool UpdateTuple(uint32_t slot_num, const uint8_t *new_tuple_data, uint32_t new_size)
+    {
         assert(slot_num < GetSlotCount());
 
         // Extract the slot layout metadata at slot_num
-        // Scenario A: If new_size <= old_slot.size_, we can overwrite the existing memory 
-        // in-place! Update the slot's size_ property to match new_size, copy the raw bytes 
+        // Scenario A: If new_size <= old_slot.size_, we can overwrite the existing memory
+        // in-place! Update the slot's size_ property to match new_size, copy the raw bytes
         // into the existing offset location via std::memcpy, and return true.
-        uint32_t offset = HEADER_SIZE + slot_num*(sizeof(uint32_t) + sizeof(uint32_t));
+        uint32_t offset = HEADER_SIZE + slot_num * (sizeof(uint32_t) + sizeof(uint32_t));
         Slot old_slot;
         std::memcpy(&old_slot, data_buffer_.data() + offset, sizeof(old_slot));
-        if(new_size <= old_slot.size_){
+        if (new_size <= old_slot.size_)
+        {
+            is_defragmented = is_defragmented && (new_size == old_slot.size_);
             old_slot.size_ = new_size;
-            std::memcpy(data_buffer_.data() + offset,reinterpret_cast<const char*>(&old_slot) ,sizeof(old_slot));
-            std::memcpy(data_buffer_.data() + old_slot.offset_,new_tuple_data, new_size);
+            std::memcpy(data_buffer_.data() + offset, reinterpret_cast<const char *>(&old_slot), sizeof(old_slot));
+            std::memcpy(data_buffer_.data() + old_slot.offset_, new_tuple_data, new_size);
             return true;
         }
 
         // Scenario B: If new_size > old_slot.size_, it won't fit in its current location.
-        // Treat this as an internal relocation: Check if there is enough space between 
+        // Treat this as an internal relocation: Check if there is enough space between
         // the current header size and the free_space_ptr to write the larger tuple.
-        // If it fits, shift free_space_ptr downward (free_space_ptr - new_size), copy the 
-        // new data there, update the slot's offset_ and size_ values, update the master 
+        // If it fits, shift free_space_ptr downward (free_space_ptr - new_size), copy the
+        // new data there, update the slot's offset_ and size_ values, update the master
         // FREE_SPACE_OFFSET header on the page, and return true.
         // If it does not fit, return false (the engine will have to turn this into a Delete + Append).
         uint32_t free_space_ptr = GetFreeSpacePointer();
         uint32_t slot_count = GetSlotCount();
-        if(free_space_ptr >= new_size && HEADER_SIZE + (sizeof(uint32_t) + sizeof(uint32_t))*(slot_count+1) <= free_space_ptr - new_size)
+        if (free_space_ptr >= new_size && HEADER_SIZE + (sizeof(uint32_t) + sizeof(uint32_t)) * (slot_count + 1) <= free_space_ptr - new_size)
         {
             old_slot.size_ = new_size;
             free_space_ptr -= new_size;
             old_slot.offset_ = free_space_ptr;
-            std::memcpy(data_buffer_.data()+free_space_ptr, new_tuple_data, new_size);
-            std::memcpy(data_buffer_.data() + offset,reinterpret_cast<const char*>(&old_slot) ,sizeof(old_slot));
+            std::memcpy(data_buffer_.data() + free_space_ptr, new_tuple_data, new_size);
+            std::memcpy(data_buffer_.data() + offset, reinterpret_cast<const char *>(&old_slot), sizeof(old_slot));
             std::memcpy(data_buffer_.data() + FREE_SPACE_OFFSET, &free_space_ptr, sizeof(uint32_t));
+            is_defragmented = false;
             return true;
         }
 
         return false;
+    }
+
+    void Defragment()
+    {
+        if (is_defragmented)
+            return;
+
+        std::array<uint8_t, 4096> tmp_buffer = data_buffer_;
+        uint32_t total_slots = GetSlotCount();
+        uint32_t new_free_space_ptr = 4096;
+
+        // Loop through every slot, maintaining its original position index
+        for (uint32_t i = 0; i < total_slots; i++)
+        {
+            uint32_t slot_header_offset = HEADER_SIZE + i * sizeof(Slot);
+
+            Slot slot;
+            std::memcpy(&slot, data_buffer_.data() + slot_header_offset, sizeof(slot));
+
+            if (slot.size_ == 0)
+            {
+                // Pinned Tombstone: Keep the slot empty but preserve its index position
+                Slot dead_slot(0, 0);
+                std::memcpy(tmp_buffer.data() + slot_header_offset, &dead_slot, sizeof(Slot));
+            }
+            else
+            {
+                // Relocate data payload safely
+                uint32_t new_offset = new_free_space_ptr - slot.size_;
+                Slot updated_slot(new_offset, slot.size_);
+
+                // Write updated metadata back to its EXACT original index location
+                std::memcpy(tmp_buffer.data() + slot_header_offset, &updated_slot, sizeof(Slot));
+
+                // Copy data payload
+                std::memcpy(tmp_buffer.data() + new_offset, data_buffer_.data() + slot.offset_, slot.size_);
+                new_free_space_ptr -= slot.size_;
+            }
+        }
+
+        // Update the free space pointer. Total slot count remains unchanged!
+        std::memcpy(tmp_buffer.data() + FREE_SPACE_OFFSET, &new_free_space_ptr, sizeof(uint32_t));
+        data_buffer_ = tmp_buffer;
+        is_defragmented = true;
     }
 };
 

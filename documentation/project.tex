@@ -12,7 +12,6 @@
     breaklines=true                % Wraps long lines of code
 }
 
-
 \title{Custom SQL Journey Documentation}
 \author{Awwab Wadekar}
 \date{\today}
@@ -476,6 +475,173 @@ Anyways the journey is a 5 phase mess:
         // Extracts a string field using the Schema's pre-calculated offset
         std::string GetVarchar(const Schema &schema, uint32_t col_idx);
     };
+\end{lstlisting}
+
+% Phase 2 : Day 3
+\newpage
+\subsection{Day 3 : The Heart of the Volcano}
+
+\paragraph{
+    Today we will be building the virtual classes that power our most core commands.
+    Any kind of SQL program follows the following pipeline: \newline
+    FROM - \textgreater ON - \textgreater JOIN - \textgreater WHERE - \textgreater GROUP BY - \textgreater HAVING - \textgreater SELECT - \textgreater DISTINCT - \textgreater ORDER BY - \textgreater LIMIT / OFFSET
+    \newline For our project, we will mostly be dealing with :
+    \newline FROM - \textgreater WHERE - \textgreater SELECT .
+    \newline However, the baseline is the same, which is what we have been building towards :
+    Fetch data from pages, strictly maintain schema and build expressions on top of abstract classes.
+    Some of our virtual baseline is given as below :
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    // executor_context.hpp
+    class ExecutorContext {
+    private:
+        BufferPoolManager &bpm_;
+
+    public:
+        explicit ExecutorContext(BufferPoolManager &bpm) : bpm_(bpm) {}
+        ~ExecutorContext() = default;
+
+        // Disallow copying for memory safety
+        ExecutorContext(const ExecutorContext&) = delete;
+        ExecutorContext& operator=(const ExecutorContext&) = delete;
+
+        BufferPoolManager* GetBufferPoolManager() { return &bpm_; }
+    };
+
+    // abstract_executor.hpp
+    class AbstractExecutor {
+    protected:
+        ExecutorContext *exec_ctx_;
+
+    public:
+        explicit AbstractExecutor(ExecutorContext *exec_ctx) : exec_ctx_(exec_ctx) {}
+        virtual ~AbstractExecutor() = default;
+
+        /**
+        * Initializes the executor. 
+        * Inside this method, internal states (like pointers or counters) should be reset.
+        */
+        virtual void Init() = 0;
+
+        /**
+        * Yields the next tuple from this operator.
+        * @param tuple The next tuple produced by this operator (output parameter)
+        * @param rid The physical record identifier of the returned tuple (output parameter)
+        * @return true if a tuple was successfully produced, false if there are no more tuples (EOF)
+        */
+        virtual bool Next(Tuple *tuple, RID *rid) = 0;
+
+        /** @return The schema of the tuples produced by this executor */
+        virtual const Schema& GetOutputSchema() const = 0;
+    };
+
+    // abstract_expression.hpp
+    class AbstractExpression
+    {
+    public:
+        virtual ~AbstractExpression() = default;
+
+        // Evaluates the expression against a specific physical tuple
+        virtual Value Evaluate(const Tuple *tuple, const Schema &schema) const = 0;
+    };
+
+
+\end{lstlisting}
+
+\paragraph{
+    One thing you will notice is that our abstractions use something called as a \textbf{Value}.
+    This is a new class defined for ensuring the general nature of our virtual core. A view of the class is given below :
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    class Value {
+    private:
+        TypeId type_;
+        union {
+            int32_t int32_val;
+        };
+        std::string varchar_val; // Handled separately due to non-trivial constructor
+
+    public:
+        Value() : type_(TypeId::INT32), int32_val(0) {}
+        Value(int32_t val) : type_(TypeId::INT32), int32_val(val) {}
+        Value(std::string val) : type_(TypeId::VARCHAR), varchar_val(val) {}
+
+        TypeId GetType(); // returns types of the value
+        int32_t AsInt32(); // returns integer value
+        std::string AsVarchar(); // returns varchar value
+    };
+    
+\end{lstlisting}
+
+\paragraph{
+    With the core setup, we can create a wide range of expressions to evaluate conditions for our data or simply fetch it in some manner.
+    We will see this in the coming days. 
+    For now we simply note our cycle as search :
+    Init - \textgreater Next - \textgreater Next - \textgreater Next ..... till condition evaluates to false. - \textgreater Init
+} 
+
+% Phase 2 : Day 4
+\newpage
+\subsection{Day 4 : Sequential Scanner}
+
+\paragraph{
+    The first executor we will build is a rather simple one. It simply starts at some page, scans every record in that page,
+    goes to next page... until it runs out of pages. Every iteration of \textbf{Next} takes it to the next record.
+    For simplcity , this executor scans page ids in increasing order, ie 0..1..2.. and so on.
+    Our Page class has also been upgraded so that it can work for any generic tuple. Both the classes are given below briefly :
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+// Upgraded Page class
+class Page {
+private:
+    std::array<uint8_t, 4096> data_buffer;
+    static constexpr size_t HEADER_SIZE = sizeof(uint32_t); // 4 bytes for record count
+
+public:
+    Page() {
+        data_buffer.fill(0); 
+    }
+    // Standard read/write methods
+    const uint8_t* ReadRawData();
+    uint8_t* WriteRawData();
+
+    uint32_t GetRecordCount(); // Gets number of records
+
+    // Generic append: Accepts a raw pointer to any serialized tuple data and its size
+    bool AppendRecord(const uint8_t* record_data, uint32_t record_size);
+
+    // Zero-Copy Accessor: Returns a direct pointer to the starting byte of a slot
+    const uint8_t* GetRecordPtr(uint32_t index, uint32_t record_size);
+};
+
+// SeqScanExecutor
+class SeqScanExecutor : public AbstractExecutor {
+private:
+    Schema schema_;
+    uint32_t total_pages_;
+    
+    // Iteration state
+    uint32_t current_page_id_;
+    uint32_t current_slot_num_;
+    uint32_t pages_scanned_;
+    uint32_t start_page_id_;
+
+
+public:
+    SeqScanExecutor(ExecutorContext *exec_ctx, const Schema &schema, uint32_t total_pages, uint32_t start_page_id = 0)
+        : AbstractExecutor(exec_ctx), schema_(schema), total_pages_(total_pages),
+          current_page_id_(start_page_id), current_slot_num_(0), start_page_id_(start_page_id), pages_scanned_(0) {}
+
+    void Init() override; // Set's current_page_id to start_page_id
+
+    bool Next(Tuple *tuple, RID *rid) override; // Advances to next record in page or first record of next page
+    // returns false if no more pages to scan
+
+    const Schema& GetOutputSchema() const override;
+};
 \end{lstlisting}
 
 \end{document}

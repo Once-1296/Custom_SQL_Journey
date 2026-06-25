@@ -12,6 +12,7 @@ protected:
 
 public:
     explicit AbstractExecutor(ExecutorContext *exec_ctx) : exec_ctx_(exec_ctx) {}
+    AbstractExecutor() = default;
     virtual ~AbstractExecutor() = default;
 
     /**
