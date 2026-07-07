@@ -22,18 +22,68 @@ struct RID
 class Tuple
 {
 private:
-    const uint8_t *data_ptr_; // Zero-copy pointer to the buffer pool page
+    const uint8_t *data_ptr_; // Pointer to data (owned or zero-copy)
     uint32_t size_;           // Size of the tuple in bytes
     RID rid_;                 // Physical location of this tuple
+    bool allocated_{false};   // TRUE if this Tuple owns the memory and must delete it
 
 public:
-    Tuple() : data_ptr_(nullptr), size_(0) {}
+    Tuple() : data_ptr_(nullptr), size_(0), allocated_(false) {}
 
-    // Initialize the tuple with a pointer to the raw page data
+    // 1. STANDARD CONSTRUCTOR (Zero-Copy)
+    // Used by Buffer Pool to point to an existing page without copying
     Tuple(const uint8_t *data_ptr, uint32_t size, RID rid)
-        : data_ptr_(data_ptr), size_(size), rid_(rid) {}
+        : data_ptr_(data_ptr), size_(size), rid_(rid), allocated_(false) {}
 
-    ~Tuple() = default;
+    // 2. COPY CONSTRUCTOR (Deep Copy)
+    // Triggered when doing: output.push_back(tuple);
+    Tuple(const Tuple &other) : size_(other.size_), rid_(other.rid_), allocated_(false) {
+        if (other.data_ptr_ != nullptr && other.size_ > 0) {
+            // Allocate new memory on the heap
+            uint8_t *copy = new uint8_t[size_];
+            // Copy the actual bytes over
+            std::memcpy(copy, other.data_ptr_, size_);
+            data_ptr_ = copy;
+            allocated_ = true; // Mark that WE own this memory
+        } else {
+            data_ptr_ = nullptr;
+        }
+    }
+
+    // 3. COPY ASSIGNMENT OPERATOR (Deep Copy)
+    // Triggered when doing: tuple1 = tuple2;
+    Tuple& operator=(const Tuple &other) {
+        if (this == &other) return *this; // Protect against self-assignment
+
+        // Free our current memory if we own it
+        if (allocated_ && data_ptr_ != nullptr) {
+            delete[] const_cast<uint8_t*>(data_ptr_);
+        }
+
+        size_ = other.size_;
+        rid_ = other.rid_;
+        
+        if (other.data_ptr_ != nullptr && other.size_ > 0) {
+            uint8_t *copy = new uint8_t[size_];
+            std::memcpy(copy, other.data_ptr_, size_);
+            data_ptr_ = copy;
+            allocated_ = true;
+        } else {
+            data_ptr_ = nullptr;
+            allocated_ = false;
+        }
+
+        return *this;
+    }
+
+    // 4. DESTRUCTOR
+    ~Tuple() {
+        // Only delete the memory if we allocated it!
+        // (Do not delete if it belongs to the Buffer Pool)
+        if (allocated_ && data_ptr_ != nullptr) {
+            delete[] const_cast<uint8_t*>(data_ptr_);
+        }
+    }
 
     RID GetRID() const { return rid_; }
     const uint8_t *GetData() const { return data_ptr_; }
@@ -47,8 +97,6 @@ public:
         assert(col.type == TypeId::INT32);
 
         int32_t value;
-        // YOUR CODE HERE: Use memcpy to copy 'col.length' bytes from
-        // (data_ptr_ + col.offset) into 'value'.
         std::memcpy(&value, data_ptr_ + col.offset, col.length);
         return value;
     }
@@ -59,10 +107,9 @@ public:
         assert(data_ptr_ != nullptr);
         const Column &col = schema.GetColumn(col_idx);
         assert(col.type == TypeId::VARCHAR);
+        
         const char *start = reinterpret_cast<const char *>(data_ptr_ + col.offset);
-
-        // Use strnlen to safely find the first null terminator up to col.length
-        size_t actual_len = ::strnlen(start, col.length);
+        size_t actual_len = strnlen(start, col.length);
         return std::string(start, actual_len);
     }
 };

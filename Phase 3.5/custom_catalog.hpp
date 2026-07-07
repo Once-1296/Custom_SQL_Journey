@@ -11,6 +11,7 @@
 #include "seq_scan_executor.hpp"
 #include "abstract_expression.hpp"
 #include "insertion_executor.hpp"
+#include "projection_executor.hpp"
 
 /*
     catalog right now should have 2 main tasks
@@ -189,12 +190,69 @@ public:
         Schema *schema = new Schema(cols);
         return schema;
     }
+    Tuple *getTuple(Schema &schema, std::vector<Value> &values)
+    {
+        uint32_t col_count = schema.GetColumnCount(), val_count = values.size();
+        if (col_count != val_count)
+        {
+            return nullptr;
+        }
+        uint32_t tuple_size = schema.GetTupleSize(), offset = 0;
+        uint8_t *buffer = new uint8_t[tuple_size];
+        for (uint32_t i = 0; i < col_count; i++)
+        {
+            const Column &col = schema.GetColumn(i);
+            const Value &val = values[i];
+            if (col.type != val.GetType())
+                return nullptr;
+            if (val.GetType() == TypeId::INT32)
+            {
+                int32_t x = val.AsInt32();
+                if (sizeof(x) != col.length)
+                    return nullptr;
+                if (offset + col.length > tuple_size)
+                {
+                    return nullptr;
+                }
+                std::memcpy(buffer + offset, &x, col.length);
+            }
+            else if (val.GetType() == TypeId::VARCHAR)
+            {
+                std::string x = val.AsVarchar();
+                if (x.length() >= col.length)
+                    return nullptr;
+                char strx[col.length];
 
-    bool InsertRow(std::string tableName, Tuple *data_ptr)
+                std::strncpy(strx, x.c_str(), sizeof(strx) - 1);
+
+                // Explicitly null-terminate the array
+                strx[sizeof(strx) - 1] = '\0';
+                // std::cout << strx << std::endl;
+                if (offset + col.length > tuple_size)
+                {
+                    return nullptr;
+                }
+                std::memcpy(buffer + offset, strx, col.length);
+            }
+            else
+                return nullptr;
+            offset += col.length;
+        }
+        if (offset != tuple_size)
+            return nullptr;
+        Tuple *tuple = new Tuple(buffer, tuple_size, RID(0, 0));
+        return tuple;
+    }
+    bool InsertRow(std::string tableName, std::vector<Value> &values)
     {
         uint32_t schema_page_id, first_page_id;
-        Schema* schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
-        if(schema == nullptr)
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
+        if (schema == nullptr)
+        {
+            return false;
+        }
+        Tuple *data_ptr = getTuple(*schema, values);
+        if (data_ptr == nullptr)
         {
             return false;
         }
@@ -206,9 +264,47 @@ public:
         return true;
     }
 
-    std::vector<Tuple> Query()
+    std::tuple<bool, Schema, std::vector<Tuple>> Query(std::string tableName, std::vector<std::string> &columns, std::unique_ptr<AbstractExpression> predicate = std::make_unique<ConstantValueExpression>(std::move(ConstantValueExpression(Value(1)))))
     {
-        
+        uint32_t schema_page_id, first_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
+        if (schema == nullptr)
+        {
+            return {false, Schema(), {}};
+        }
+        std::vector<std::unique_ptr<AbstractExpression>> target_cols;
+        uint32_t col_count = schema->GetColumnCount();
+        std::vector<Column> output_cols;
+        for (auto &name : columns)
+        {
+            int ind = -1;
+            for (uint32_t i = 0; i < col_count; i++)
+            {
+                const Column &col = schema->GetColumn(i);
+                if (name == col.name)
+                {
+                    ind = i;
+                    output_cols.push_back(col);
+                    break;
+                }
+            }
+            if (ind == -1)
+                return {false, Schema(), {}};
+            target_cols.push_back(std::make_unique<ColumnValueExpression>(std::move(ColumnValueExpression(ind))));
+        }
+        Schema output_schema(output_cols);
+        ExecutorContext ctx(*bpm_);
+        ProjectionExecutor PE(&ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(&ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(&ctx, *schema, 0, first_page_id))), std::move(predicate)))), output_schema, std::move(target_cols));
+        std::vector<Tuple> output;
+        PE.Init();
+        Tuple tuple;
+        RID rid;
+        while (PE.Next(&tuple, &rid))
+        {
+            output.push_back(Tuple(tuple));
+            // std::cout << tuple.GetVarchar(output_schema, 0) << std::endl;
+        }
+        return {true, output_schema, output};
     }
 };
 
