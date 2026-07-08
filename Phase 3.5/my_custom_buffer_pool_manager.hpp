@@ -4,9 +4,10 @@
 #include <unordered_map>
 #include <array>
 #include <cstdint>
-#include "slotted_page.hpp"         // Your Page class
+#include "slotted_page.hpp"           // Your Page class
 #include "my_custom_disk_manager.hpp" // Your DiskManager class
 #include <list>
+#include <set>
 
 class BufferPoolManager
 {
@@ -19,7 +20,7 @@ private:
     // Inside BufferPoolManager:
     // 1. The list stores page_ids. Front is MRU (Most Recently Used), Back is LRU.
     std::list<uint32_t> lru_list;
-
+    std::set<uint32_t> free_frames;
     // 2. The map stores the frame and the iterator (the "bookmark")
     struct PageMetadata
     {
@@ -33,11 +34,20 @@ public:
     uint32_t cache_hits = 0;
     uint32_t cache_misses = 0;
 
-    BufferPoolManager(DiskManager &disk) : disk_manager(disk) {}
-    ~BufferPoolManager() {
+    BufferPoolManager(DiskManager &disk) : disk_manager(disk)
+    {
+        for (uint32_t i = 0; i < POOL_SIZE; i++)
+        {
+            free_frames.insert(i);
+        }
+    }
+    ~BufferPoolManager()
+    {
         // Write back all dirty pages to disk upon destruction
-        for (const auto &entry : page_table) {
-            if (entry.second.is_dirty) {
+        for (const auto &entry : page_table)
+        {
+            if (entry.second.is_dirty)
+            {
                 disk_manager.WritePage(entry.first, pool[entry.second.frame_id]);
             }
         }
@@ -69,7 +79,7 @@ public:
         {
             // 1. Evict LRU victim
             uint32_t victim_id = lru_list.back();
-            frame_to_use = page_table[victim_id].frame_id; // Reuse the victim's frame
+            free_frames.insert(page_table[victim_id].frame_id); // Reuse the victim's frame
             if (page_table[victim_id].is_dirty)
             {
                 disk_manager.WritePage(victim_id, pool[page_table[victim_id].frame_id]);
@@ -77,24 +87,45 @@ public:
             page_table.erase(victim_id);
             lru_list.pop_back();
         }
-        else
-        {
-            // 2. Use the next available frame
-            frame_to_use = next_free_frame++;
-        }
+        // 2. Use the smallest available frame
+        frame_to_use = *free_frames.begin();
 
         // 3. Load from disk directly into the target pool frame
         disk_manager.ReadPage(page_id, pool[frame_to_use]);
-
         // 4. Update metadata
         lru_list.push_front(page_id);
         page_table[page_id] = {frame_to_use, lru_list.begin(), false};
+        free_frames.erase(frame_to_use);
 
         return &pool[frame_to_use];
     }
 
-    uint32_t NewPage() const {
+    uint32_t NewPage() const
+    {
         return disk_manager.AllocatePage();
+    }
+
+    uint32_t DeletePageHelper(uint32_t page_id)
+    {
+        uint32_t deleted_count = 0;
+        while (page_id != 0xFFFFFFFF)
+        {
+            // Remove from buffer pool if present
+            Page *page = FetchPage(page_id);
+            if(page == nullptr)break;
+            auto it = page_table.find(page_id);
+            if (it != page_table.end())
+            {
+                free_frames.insert(it->second.frame_id);
+                lru_list.erase(it->second.list_iterator);
+                page_table.erase(it);
+            }
+            page_id = page->GetNextPageId();
+            // Delete from disk and all successors
+            disk_manager.DeletePage(page_id);
+            deleted_count++;
+        }
+        return deleted_count;
     }
 };
 #endif

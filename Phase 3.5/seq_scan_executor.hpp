@@ -38,13 +38,18 @@ public:
                 return false;
             }
 
+            
             uint32_t record_count = page->GetSlotCount();
-
             if (current_slot_num_ < record_count) {
                 // Retrieve the direct zero-copy pointer to the tuple data 
                 // from the generic page using our schema's runtime 'tuple_size'.
                 uint32_t out_tuple_size;
                 const uint8_t* tuple_ptr = page->GetTuplePtr(current_slot_num_, &out_tuple_size);
+                if(out_tuple_size == 0)
+                {
+                    current_slot_num_++;
+                    continue;
+                }
                 assert(out_tuple_size==tuple_size);
                 assert(tuple_ptr != nullptr);
                 // Construct the zero-copy Tuple instance and populate the output pointers

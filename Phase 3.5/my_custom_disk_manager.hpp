@@ -60,11 +60,36 @@ public:
 
     uint32_t AllocatePage() {
         db_file.clear();
-        uint32_t allocated_id = num_pages_; // Current page count becomes the new ID
+        uint32_t allocated_id = 0; // Find Dead Page or make new Page
+        while(allocated_id < num_pages_)
+        {
+            Page page;
+            ReadPage(allocated_id, page);
+            bool isAlive = page.isAlive();
+            if(!isAlive)
+            {
+                Page blank_page;
+                WritePage(allocated_id, blank_page);
+                return allocated_id;
+            }
+            allocated_id++;
+        }
         Page blank_page;
         WritePage(allocated_id, blank_page);
         num_pages_++; // Safely increment cache
         return allocated_id;
+    }
+
+    bool DeletePage(uint32_t page_id) {
+        db_file.clear();
+        if (page_id!= 0xFFFFFFFF) {
+            Page page;
+            ReadPage(page_id, page);
+            page.DeletePage();
+            WritePage(page_id, page);
+            return true;
+        }
+        return false;
     }
 };
 

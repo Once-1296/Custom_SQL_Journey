@@ -92,6 +92,29 @@ public:
     }
 };
 
+class TruthyExpression : public AbstractExpression
+{
+private:
+    Value val_;
+
+public:
+    TruthyExpression(Value val) : val_(val) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        uint32_t flag = true;
+        if (val_.GetType() == TypeId::INT32)
+        {
+            flag = (Value(0) != val_);
+        }
+        else if (val_.GetType() == TypeId::VARCHAR)
+        {
+            flag = (Value("") != val_);
+        }
+        return Value(flag);
+    }
+};
+
 class EqualExpression : public AbstractExpression
 {
 private:
@@ -122,6 +145,42 @@ public:
         // Write your comparison logic here
         int32_t result = (left_str == right_str) ? 1 : 0;
         return Value(result);
+    }
+};
+
+class CNFExpression : public AbstractExpression
+{
+private:
+    std::vector<std::vector<std::unique_ptr<AbstractExpression>>> expressions_;
+
+public:
+    CNFExpression(std::vector<std::vector<std::unique_ptr<AbstractExpression>>> expressions) : expressions_(std::move(expressions)) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        // for each row, at least one evaluates to true
+        // if any row is false, fail
+        uint32_t n = expressions_.size();
+        for (uint32_t i = 0; i < n; i++)
+        {
+            uint32_t m = expressions_[i].size();
+            bool row_result = false;
+            for (uint32_t j = 0; j < m; j++)
+            {
+                Value val = expressions_[i][j]->Evaluate(tuple, schema);
+                assert(val.GetType() == TypeId::INT32 && "Unsupported types for comparison");
+                if (val.AsInt32() == 1)
+                {
+                    row_result = true;
+                    break;
+                }
+            }
+            if (!row_result)
+            {
+                return Value(0);
+            }
+        }
+        return Value(1);
     }
 };
 #endif

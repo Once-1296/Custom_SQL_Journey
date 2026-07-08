@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <cstring>
+#include <map>
 #include <cassert>
 #include "my_custom_buffer_pool_manager.hpp"
 #include "schema.hpp"
@@ -12,6 +13,8 @@
 #include "abstract_expression.hpp"
 #include "insertion_executor.hpp"
 #include "projection_executor.hpp"
+#include "update_executor.hpp"
+#include "delete_executor.hpp"
 
 /*
     catalog right now should have 2 main tasks
@@ -305,6 +308,90 @@ public:
             // std::cout << tuple.GetVarchar(output_schema, 0) << std::endl;
         }
         return {true, output_schema, output};
+    }
+
+    CNFExpression makeCNF()
+    {
+    }
+    bool UpdateRow(std::string tableName, std::vector<std::pair<std::string, Value>> updated_cols, std::unique_ptr<AbstractExpression> condition)
+    {
+        uint32_t schema_page_id, first_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
+        if (schema == nullptr)
+        {
+            return false;
+        }
+        std::map<std::string, Value> col_value_map;
+        uint32_t col_count = schema->GetColumnCount();
+        for(auto&[str,Val]:updated_cols)
+        {
+            bool exists = false;
+            if(col_value_map.contains(str))
+            {
+                // repeat column
+                return false;
+            }
+            for(uint32_t i =0;i<col_count;i++)
+            {
+                const Column &col = schema->GetColumn(i);
+                if(col.name == str)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+            if(!exists)
+            {
+                // non existent column
+                return false;
+            }
+            col_value_map.insert(std::make_pair(str,Val));
+        }
+        ExecutorContext *ctx = new ExecutorContext(*bpm_);
+        UpdateExecutor updator(ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(ctx,*schema,0 ,first_page_id))), std::move(condition)))), col_value_map);
+        updator.Init();
+        Tuple tuple;
+        RID rid;
+        updator.Next(&tuple, &rid);
+        return true;
+    }
+
+    bool DeleteRow(std::string tableName, std::unique_ptr<AbstractExpression> condition)
+    {
+        uint32_t schema_page_id, first_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
+        if (schema == nullptr)
+        {
+            return false;
+        }
+        ExecutorContext *ctx = new ExecutorContext(*bpm_);
+        DeleteExecutor deletor(ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(ctx,*schema,0 ,first_page_id))), std::move(condition)))));
+        deletor.Init();
+        Tuple tuple;
+        RID rid;
+        deletor.Next(&tuple, &rid);
+        return true;
+    }
+
+    bool DeleteTable(std::string tableName)
+    {
+        uint32_t schema_page_id, first_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
+        if (schema == nullptr)
+        {
+            return false;
+        }
+        bpm_->DeletePageHelper(schema_page_id);
+        bpm_->DeletePageHelper(first_page_id);
+        auto col_expr = std::make_unique<ColumnValueExpression>(0);
+        auto const_expr = std::make_unique<ConstantValueExpression>(Value(tableName));
+        ExecutorContext *ctx = new ExecutorContext(*bpm_);
+        DeleteExecutor deletor(ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(ctx, tab_schema, 0, first_page))), std::make_unique<EqualExpression>(EqualExpression(std::move(col_expr), std::move(const_expr)))))));
+        deletor.Init();
+        Tuple tuple;
+        RID rid;
+        deletor.Next(&tuple, &rid);
+        return true;
     }
 };
 

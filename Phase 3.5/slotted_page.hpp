@@ -15,10 +15,11 @@ private:
 
     // Static layout definitions
     static constexpr size_t PAGE_SIZE = 4096;
-    static constexpr size_t SLOT_COUNT_OFFSET = 0;   // 4 bytes
-    static constexpr size_t FREE_SPACE_OFFSET = 4;   // 4 bytes
-    static constexpr size_t NEXT_PAGE_ID_OFFSET = 8; // 4 bytes (New!)
-    static constexpr size_t HEADER_SIZE = 12;        // 12 bytes total
+    static constexpr size_t SLOT_COUNT_OFFSET = 0;     // 4 bytes
+    static constexpr size_t FREE_SPACE_OFFSET = 4;     // 4 bytes
+    static constexpr size_t NEXT_PAGE_ID_OFFSET = 8;   // 4 bytes (New!)
+    static constexpr size_t IS_PAGE_ALIVE_OFFSET = 12; // 4 bytes (New!)
+    static constexpr size_t HEADER_SIZE = 16;          // 16 bytes total
     struct [[gnu::packed]] Slot
     {
         uint32_t offset_;
@@ -51,6 +52,10 @@ public:
         // set next_page_id by default to a sentinel value : 0xFFFFFFFF
         uint32_t sentinel_id = 0xFFFFFFFF;
         std::memcpy(data_buffer_.data() + NEXT_PAGE_ID_OFFSET, &sentinel_id, sizeof(uint32_t));
+
+        // Page is alive by default
+        uint32_t alive_flag = 1;
+        std::memcpy(data_buffer_.data() + IS_PAGE_ALIVE_OFFSET, &alive_flag, sizeof(uint32_t));
 
         is_defragmented = true;
     }
@@ -258,8 +263,26 @@ public:
         is_defragmented = true;
     }
 
-    const uint32_t maxPageSpace() const {
+    const uint32_t maxPageSpace() const
+    {
         return 4096 - HEADER_SIZE;
+    }
+
+    void DeletePage()
+    {
+        uint32_t alive_flag = 0;
+        std::memcpy(data_buffer_.data() + IS_PAGE_ALIVE_OFFSET, &alive_flag, sizeof(uint32_t));
+    }
+
+    bool isAlive()
+    {
+        uint32_t alive_flag = 0;
+        std::memcpy(&alive_flag, data_buffer_.data() + IS_PAGE_ALIVE_OFFSET, sizeof(uint32_t));
+        return alive_flag == 1;
+    }
+    const bool isDefragmented() const
+    {
+        return is_defragmented;
     }
 };
 
