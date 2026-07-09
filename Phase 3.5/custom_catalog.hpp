@@ -106,7 +106,7 @@ public:
     bool createTable(std::string tableName, Schema &schema)
     {
         assert(tableName.length() < 64);
-
+        assert(schema.GetColumnCount() > 0);
         // check if table exists
         if (GetTableSchema(tableName) != nullptr)
             return false;
@@ -246,6 +246,34 @@ public:
         Tuple *tuple = new Tuple(buffer, tuple_size, RID(0, 0));
         return tuple;
     }
+    std::unique_ptr<CNFExpression> makeCNF(Schema &schema, std::vector<Value> &values)
+    {
+        uint32_t col_count = schema.GetColumnCount();
+
+        // 1. Declare using the Base class pointer (AbstractExpression)
+        std::vector<std::vector<std::unique_ptr<AbstractExpression>>> Unique_compare;
+
+        for (uint32_t i = 0; i < col_count; i++)
+        {
+            const Column &col = schema.GetColumn(i);
+            if (col.is_in_candidate_key)
+            {
+                // 2. Create the inner row vector
+                std::vector<std::unique_ptr<AbstractExpression>> row;
+
+                // 3. Push the expressions, utilizing std::make_unique's argument forwarding
+                row.push_back(std::make_unique<EqualExpression>(
+                    std::make_unique<ColumnValueExpression>(i),
+                    std::make_unique<ConstantValueExpression>(values[i])));
+
+                // 4. Move the row into the outer vector
+                Unique_compare.push_back(std::move(row));
+            }
+        }
+
+        // 5. Move the perfectly matched vector into CNFExpression
+        return std::make_unique<CNFExpression>(std::move(Unique_compare));
+    }
     bool InsertRow(std::string tableName, std::vector<Value> &values)
     {
         uint32_t schema_page_id, first_page_id;
@@ -256,6 +284,12 @@ public:
         }
         Tuple *data_ptr = getTuple(*schema, values);
         if (data_ptr == nullptr)
+        {
+            return false;
+        }
+        std::vector<std::string> first_col = {schema->GetColumn(0).name};
+        auto exists_query = Query(tableName, first_col, std::move(makeCNF(*schema, values)));
+        if (std::get<2>(exists_query).size() != 0)
         {
             return false;
         }
@@ -310,9 +344,6 @@ public:
         return {true, output_schema, output};
     }
 
-    CNFExpression makeCNF()
-    {
-    }
     bool UpdateRow(std::string tableName, std::vector<std::pair<std::string, Value>> updated_cols, std::unique_ptr<AbstractExpression> condition)
     {
         uint32_t schema_page_id, first_page_id;
@@ -323,32 +354,32 @@ public:
         }
         std::map<std::string, Value> col_value_map;
         uint32_t col_count = schema->GetColumnCount();
-        for(auto&[str,Val]:updated_cols)
+        for (auto &[str, Val] : updated_cols)
         {
             bool exists = false;
-            if(col_value_map.contains(str))
+            if (col_value_map.contains(str))
             {
                 // repeat column
                 return false;
             }
-            for(uint32_t i =0;i<col_count;i++)
+            for (uint32_t i = 0; i < col_count; i++)
             {
                 const Column &col = schema->GetColumn(i);
-                if(col.name == str)
+                if (col.name == str)
                 {
                     exists = true;
                     break;
                 }
             }
-            if(!exists)
+            if (!exists)
             {
                 // non existent column
                 return false;
             }
-            col_value_map.insert(std::make_pair(str,Val));
+            col_value_map.insert(std::make_pair(str, Val));
         }
         ExecutorContext *ctx = new ExecutorContext(*bpm_);
-        UpdateExecutor updator(ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(ctx,*schema,0 ,first_page_id))), std::move(condition)))), col_value_map);
+        UpdateExecutor updator(ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(ctx, *schema, 0, first_page_id))), std::move(condition)))), col_value_map);
         updator.Init();
         Tuple tuple;
         RID rid;
@@ -365,7 +396,7 @@ public:
             return false;
         }
         ExecutorContext *ctx = new ExecutorContext(*bpm_);
-        DeleteExecutor deletor(ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(ctx,*schema,0 ,first_page_id))), std::move(condition)))));
+        DeleteExecutor deletor(ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(ctx, *schema, 0, first_page_id))), std::move(condition)))));
         deletor.Init();
         Tuple tuple;
         RID rid;
