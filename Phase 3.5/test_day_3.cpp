@@ -3,6 +3,7 @@
 #include <vector>
 int main()
 {
+    // Test 3 : querying
     std::string filename = "test_3.db";
     std::remove(filename.c_str());
     std::vector<Column> cols = {
@@ -24,14 +25,12 @@ int main()
     }
     {
         catalog cata(filename);
-        std::vector<Value> values = {Value(60), Value("Awwab")};
+        std::vector<std::vector<Value>> values = {{Value(60), Value("Awwab")}};
         assert(cata.InsertRow("student", values) == true);
         assert(cata.InsertRow("nonexist", values) == false);
-        values = {Value("19"), Value("Awwab")};
+        values = {{Value("19"), Value("Awwab")}};
         assert(cata.InsertRow("student", values) == false);
-        values = {Value(47), Value("Aadil")};
-        assert(cata.InsertRow("student", values) == true);
-        values = {Value(50), Value("Aribah")};
+        values ={{Value(47), Value("Aadil")},{Value(50), Value("Aribah")}};
         assert(cata.InsertRow("student", values) == true);
         std::cout << "Inserted Values" << std::endl;
     }
@@ -80,7 +79,7 @@ int main()
         auto col_expr = std::make_unique<ColumnValueExpression>(0);
         auto const_expr = std::make_unique<ConstantValueExpression>(Value(50));
         ComparisonExpression comp_expr(std::move(col_expr), std::move(const_expr));
-        auto res = cata.Query("student", cols, std::move(std::make_unique<ComparisonExpression>(std::move(comp_expr))));
+        auto res = cata.Query("student", cols, std::move(std::make_unique<ComparisonExpression>(std::move(comp_expr))), {"Identity", "Naam"});
         assert(std::get<0>(res) == true);
         std::cout << "Fetched Values Where Id > 50" << std::endl;
         Schema schema = std::get<1>(res);

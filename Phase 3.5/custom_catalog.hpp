@@ -112,7 +112,7 @@ public:
             return false;
 
         char name[64];
-        std::strcpy(name, tableName.c_str());
+        std::strncpy(name, tableName.c_str(), 63);
         uint32_t schema_page_id = bpm_->NewPage();
         uint32_t column_count = schema.GetColumnCount();
         uint32_t first_page_id = bpm_->NewPage();
@@ -144,7 +144,7 @@ public:
         return true;
     }
 
-    Schema *GetTableSchema(std::string Name, uint32_t *out_schema_page_id = nullptr, uint32_t *out_first_page_id = nullptr)
+    Schema *GetTableSchema(std::string Name, uint32_t *out_schema_page_id = nullptr, uint32_t *out_first_page_id = nullptr, uint32_t *out_row_count = nullptr)
     {
         auto col_expr = std::make_unique<ColumnValueExpression>(0);
         auto const_expr = std::make_unique<ConstantValueExpression>(Value(Name));
@@ -168,6 +168,7 @@ public:
         }
         uint32_t schema_page_id = tuple.GetInt32(tab_schema, 3); // schema_page_id is at 3
         uint32_t first_page_id = tuple.GetInt32(tab_schema, 1);
+        uint32_t row_count = tuple.GetInt32(tab_schema, 2);
         SeqScanExecutor schema_fetch(ctx, col_schema, 0, schema_page_id);
         schema_fetch.Init();
         std::vector<Column> cols;
@@ -179,7 +180,7 @@ public:
             bool is_in_candidate_key = tuple.GetInt32(col_schema, 3) == 1;
             TypeId type = (col_type == 1) ? TypeId::INT32 : TypeId::VARCHAR;
             char c_name[32];
-            std::strcpy(c_name, col_name.c_str());
+            std::strncpy(c_name, col_name.c_str(), 31);
             cols.push_back(Column(c_name, type, col_length, 0, is_in_candidate_key));
         }
         if (out_schema_page_id != nullptr)
@@ -189,6 +190,10 @@ public:
         if (out_first_page_id != nullptr)
         {
             *out_first_page_id = first_page_id;
+        }
+        if (out_row_count != nullptr)
+        {
+            *out_row_count = row_count;
         }
         Schema *schema = new Schema(cols);
         return schema;
@@ -274,7 +279,56 @@ public:
         // 5. Move the perfectly matched vector into CNFExpression
         return std::make_unique<CNFExpression>(std::move(Unique_compare));
     }
-    bool InsertRow(std::string tableName, std::vector<Value> &values)
+    int32_t fetchRowCount(std::string tableName)
+    {
+        uint32_t schema_page_id, row_count, first_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id, &row_count);
+        if (schema == nullptr)
+        {
+            return -1;
+        }
+        return row_count;
+    }
+    int32_t fetchRowCount_RAW(std::string tableName)
+    {
+        uint32_t schema_page_id, first_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
+        if (schema == nullptr)
+        {
+            return -1;
+        }
+        ExecutorContext *ctx = new ExecutorContext(*bpm_);
+        SeqScanExecutor SSE(ctx, *schema, 0, first_page_id);
+        SSE.Init();
+        int32_t row_count = 0;
+        Tuple tuple;
+        RID rid;
+        while (SSE.Next(&tuple, &rid))
+        {
+            row_count++;
+        }
+        return row_count;
+    }
+    int32_t updateRowCount(std::string tableName)
+    {
+        uint32_t schema_page_id, row_count, first_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id, &row_count);
+        if (schema == nullptr)
+        {
+            return 0xFFFFFFFF;
+        }
+        int32_t new_count = fetchRowCount_RAW(tableName), old_count = row_count;
+        auto expr = std::make_unique<EqualExpression>(EqualExpression(std::move(std::make_unique<ColumnValueExpression>(ColumnValueExpression(0))), std::move(std::make_unique<ConstantValueExpression>(Value(tableName)))));
+        ExecutorContext *ctx = new ExecutorContext(*bpm_);
+        std::map<std::string, Value>mp = {{"rows",  Value(new_count)}};
+        UpdateExecutor updator(ctx, std::move(std::make_unique<FilterExecutor>(FilterExecutor(ctx, std::move(std::make_unique<SeqScanExecutor>(SeqScanExecutor(ctx, tab_schema, 0, 0))), std::move(expr)))),mp);
+        updator.Init();
+        Tuple tuple;
+        RID rid;
+        updator.Next(&tuple,&rid);
+        return new_count - old_count;
+    }
+    bool InsertRow(std::string tableName, std::vector<std::vector<Value>> &values_vec, int32_t *out_change_count = nullptr)
     {
         uint32_t schema_page_id, first_page_id;
         Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
@@ -282,27 +336,44 @@ public:
         {
             return false;
         }
-        Tuple *data_ptr = getTuple(*schema, values);
-        if (data_ptr == nullptr)
+        std::vector<Tuple *> pointers;
+        for (auto &values : values_vec)
         {
-            return false;
+            Tuple *data_ptr = getTuple(*schema, values);
+            if (data_ptr == nullptr)
+            {
+                return false;
+            }
         }
-        std::vector<std::string> first_col = {schema->GetColumn(0).name};
-        auto exists_query = Query(tableName, first_col, std::move(makeCNF(*schema, values)));
-        if (std::get<2>(exists_query).size() != 0)
+        for (auto &values : values_vec)
         {
-            return false;
+            Tuple *data_ptr = getTuple(*schema, values);
+            std::vector<std::string> first_col = {schema->GetColumn(0).name};
+            auto exists_query = Query(tableName, first_col, std::move(makeCNF(*schema, values)));
+            if (std::get<2>(exists_query).size() != 0)
+            {
+                continue;
+            }
+            ExecutorContext *ctx = new ExecutorContext(*bpm_);
+            InsertionExecutor insertor(ctx, *schema, first_page_id);
+            insertor.Init();
+            RID rid;
+            insertor.Next(data_ptr, &rid);
         }
-        ExecutorContext *ctx = new ExecutorContext(*bpm_);
-        InsertionExecutor insertor(ctx, *schema, first_page_id);
-        insertor.Init();
-        RID rid;
-        insertor.Next(data_ptr, &rid);
+        int32_t change_count = updateRowCount(tableName);
+        if (out_change_count != nullptr)
+        {
+            *out_change_count = change_count;
+        }
         return true;
     }
 
-    std::tuple<bool, Schema, std::vector<Tuple>> Query(std::string tableName, std::vector<std::string> &columns, std::unique_ptr<AbstractExpression> predicate = std::make_unique<ConstantValueExpression>(std::move(ConstantValueExpression(Value(1)))))
+    std::tuple<bool, Schema, std::vector<Tuple>> Query(std::string tableName, std::vector<std::string> &columns, std::unique_ptr<AbstractExpression> predicate = std::make_unique<ConstantValueExpression>(std::move(ConstantValueExpression(Value(1)))), std::vector<std::string> returnColumns = {})
     {
+        if (columns.empty())
+            return {false, Schema(), {}};
+        if (returnColumns.empty())
+            returnColumns = columns;
         uint32_t schema_page_id, first_page_id;
         Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
         if (schema == nullptr)
@@ -310,7 +381,7 @@ public:
             return {false, Schema(), {}};
         }
         std::vector<std::unique_ptr<AbstractExpression>> target_cols;
-        uint32_t col_count = schema->GetColumnCount();
+        uint32_t col_count = schema->GetColumnCount(), ptr = 0;
         std::vector<Column> output_cols;
         for (auto &name : columns)
         {
@@ -321,7 +392,8 @@ public:
                 if (name == col.name)
                 {
                     ind = i;
-                    output_cols.push_back(col);
+                    Column output_col = Column(returnColumns[ptr++].data(), col.type, col.length, col.offset, col.is_in_candidate_key);
+                    output_cols.push_back(output_col);
                     break;
                 }
             }
@@ -344,7 +416,7 @@ public:
         return {true, output_schema, output};
     }
 
-    bool UpdateRow(std::string tableName, std::vector<std::pair<std::string, Value>> updated_cols, std::unique_ptr<AbstractExpression> condition)
+    bool UpdateRow(std::string tableName, std::vector<std::pair<std::string, Value>> updated_cols, std::unique_ptr<AbstractExpression> condition, uint32_t *out_affected_rows = nullptr)
     {
         uint32_t schema_page_id, first_page_id;
         Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
@@ -383,11 +455,19 @@ public:
         updator.Init();
         Tuple tuple;
         RID rid;
-        updator.Next(&tuple, &rid);
+        uint32_t affected_rows = 0;
+        while (updator.Next(&tuple, &rid))
+        {
+            affected_rows++;
+        }
+        if (out_affected_rows != nullptr)
+        {
+            *out_affected_rows = affected_rows;
+        }
         return true;
     }
 
-    bool DeleteRow(std::string tableName, std::unique_ptr<AbstractExpression> condition)
+    bool DeleteRow(std::string tableName, std::unique_ptr<AbstractExpression> condition, int32_t *out_change_count = nullptr)
     {
         uint32_t schema_page_id, first_page_id;
         Schema *schema = GetTableSchema(tableName, &schema_page_id, &first_page_id);
@@ -400,7 +480,14 @@ public:
         deletor.Init();
         Tuple tuple;
         RID rid;
-        deletor.Next(&tuple, &rid);
+        while (deletor.Next(&tuple, &rid))
+        {
+        }
+        int32_t change_count = updateRowCount(tableName);
+        if (out_change_count != nullptr)
+        {
+            *out_change_count = change_count;
+        }
         return true;
     }
 

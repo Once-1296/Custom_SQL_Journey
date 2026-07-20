@@ -4,7 +4,9 @@
 \usepackage{graphicx}
 \usepackage{listings}
 \usepackage{xcolor}
-
+\usepackage{tikz}
+% Load libraries for shapes, advanced arrowheads, and relative positioning
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning}
 \lstset{
     basicstyle=\ttfamily,          % Uses the monospace code font
     keywordstyle=\color{blue},     % Colors keywords blue
@@ -643,5 +645,455 @@ public:
     const Schema& GetOutputSchema() const override;
 };
 \end{lstlisting}
+% Phase 2 : Day 5
+\newpage
+\subsection{Day 5 : Abstract Expressions}
 
+\paragraph{
+    Our \textbf{WHERE} Clause will be a collection of boolean checks, like age \textgreater \  18, marks \textless \  100, etc.
+    To evaluate these clauses, we will use a generic expression class.\newline
+    \textbf{ColumnValueExpression} and \textbf{ConstantValueExpression} are the Operand types.
+    While we will build expressions similar to \textbf{ComparisonExpression}, where we take 2 operands and perform the greater than operation.
+    A view of these classes is given below.
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    // Virtual Base Class
+    class AbstractExpression
+    {
+    public:
+        virtual ~AbstractExpression() = default;
+
+        // Evaluates the expression against a specific physical tuple
+        virtual Value Evaluate(const Tuple *tuple, const Schema &schema) const = 0;
+    };
+
+    // Represents a literal constant value inside a query (e.g., the number 21)
+    class ConstantValueExpression : public AbstractExpression
+    {
+    private:
+        Value val_;
+
+    public:
+        explicit ConstantValueExpression(Value val) : val_(val) {}
+        // Returns a constant value
+        Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    };
+
+    // Represents a variable reference to a column inside a tuple (e.g., table.age)
+    class ColumnValueExpression : public AbstractExpression
+    {
+    private:
+        uint32_t col_idx_;
+
+    public:
+        explicit ColumnValueExpression(uint32_t col_idx) : col_idx_(col_idx) {}
+
+        // Fetches a column using the data from tuple and the schema for offset
+        Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    };
+
+    // Represents a binary comparison operation (For today, we will explicitly implement GT '>')
+    class ComparisonExpression : public AbstractExpression
+    {
+    private:
+        std::unique_ptr<AbstractExpression> left_;
+        std::unique_ptr<AbstractExpression> right_;
+
+    public:
+        ComparisonExpression(std::unique_ptr<AbstractExpression> left, std::unique_ptr<AbstractExpression> right)
+            : left_(std::move(left)), right_(std::move(right)) {}
+
+        // Evaluates both children, asserts same type values and compares their values, returns true if lhs > rhs
+        Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+        
+    };
+    
+\end{lstlisting}
+
+% Phase 2 : Day 6
+\newpage
+\subsection{Day 6 : Filtering Fun}
+
+\paragraph{
+    Continuing from Day 6, we are building towards our \textbf{WHERE} clause.
+    In the past days we have built both Abstract Expressions and Sequential Scanner. Now we will link both to a single unit.
+    \newline The filter executor calls a child abstract executor, (mostly our sequential scanner) then checks if the current row satisfies the expression given.
+    This expression is the predicate. 
+} \mbox{} \\
+
+\paragraph{
+    A rough view of this new executor class is given below :
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    class FilterExecutor : public AbstractExecutor
+    {
+    private:
+        std::unique_ptr<AbstractExecutor> child_executor_;
+        std::unique_ptr<AbstractExpression> predicate_;
+
+    public:
+        FilterExecutor(ExecutorContext *exec_ctx,
+                    std::unique_ptr<AbstractExecutor> child_executor,
+                    std::unique_ptr<AbstractExpression> predicate)
+            : AbstractExecutor(exec_ctx),
+            child_executor_(std::move(child_executor)),
+            predicate_(std::move(predicate)) {}
+
+        // Calls child_executor->Init()
+        void Init() override
+        
+
+        // Collects tuple from child executor, evaluates it against predicate, returns if true
+        // Else it encounters EOF or tries next row
+        bool Next(Tuple *tuple, RID *rid) override
+        
+        // A filter doesn't mutate rows; its output schema is identical to its child's schema
+        const Schema &GetOutputSchema() const override
+    };
+\end{lstlisting}
+
+% Phase 2 : Day 7
+\newpage
+\subsection{Day 7 : Pinning it with Projection }
+\paragraph{
+    Our final Executor for this phase completes the \textit{SELECT ... FROM ... WHERE... } pipeline.
+    It collects the Valid rows and selects the columns asked.
+    \newline For this it uses:
+    \newline 1. A child executor, often a filter executor.
+    \newline 2. A schema describing the new columns
+    \newline 3. A list of column expressions denoting the selected columns from the input
+    \newline To store these values, we use a temporary buffer
+    It's outline is given below :
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+class ProjectionExecutor : public AbstractExecutor
+{
+private:
+    std::unique_ptr<AbstractExecutor> child_executor_;
+    Schema output_schema_;
+    std::vector<std::unique_ptr<AbstractExpression>> expressions_;
+
+    // Local workspace buffer to hold the newly materialized tuple data
+    std::vector<uint8_t> tuple_buffer_;
+
+public:
+    // Set the variables and
+    // Resize our local buffer to match the exact byte size of our target output layout
+    ProjectionExecutor(ExecutorContext *exec_ctx,
+                       std::unique_ptr<AbstractExecutor> child_executor,
+                       Schema output_schema,
+                       std::vector<std::unique_ptr<AbstractExpression>> expressions)
+        : AbstractExecutor(exec_ctx),
+          child_executor_(std::move(child_executor)),
+          output_schema_(output_schema),
+          expressions_(std::move(expressions))
+    {
+        tuple_buffer_.resize(output_schema_.GetTupleSize());
+    }
+    // Calls child_executor->Init()
+    void Init() override
+
+    // Pulls the next row from child to return target columns or returns EOF
+    bool Next(Tuple *tuple, RID *rid) override
+
+    // returns target schema for result
+    const Schema &GetOutputSchema() const override
+};
+\end{lstlisting}
+
+% Phase 2 : Day 8
+\newpage
+\subsection{Day 8 : End to End Showcase}
+\paragraph{
+    Whew, that took too long. Anyways We are gonna be wrapping up this phase by creating a custom schema, selecting target columns,
+    specifying the filter condition and finally verifying our results. A brief overview of the testing pipeline is: 
+} \mbox{} \\
+\begin{lstlisting}[language=C++]
+    void TestEndToEndPipeline()
+    {
+        std::string filename = "end_to_end_db.bin";
+        std::remove(filename.c_str());
+
+        DiskManager disk(filename);
+        BufferPoolManager bpm(disk);
+        ExecutorContext exec_ctx(bpm);
+
+        // 1. Core Source Layout: { id (0), username (1), age (2) }
+        std::vector<Column> src_cols = {
+            {"id", TypeId::INT32, 4, 0},
+            {"username", TypeId::VARCHAR, 32, 0},
+            {"age", TypeId::INT32, 4, 0}};
+        Schema src_schema(src_cols);
+        uint32_t tuple_size = src_schema.GetTupleSize();
+
+        // 2. Populate Disk Frame: Create 5 users spread over 3 pages
+        uint32_t p0_id = disk.AllocatePage();
+        uint32_t p1_id = disk.AllocatePage();
+        uint32_t p2_id = disk.AllocatePage();
+
+        // Page 0: Alice (ID: 1, Age: 25), Bob (ID: 2, Age: 30)
+        Page *p0 = bpm.FetchPage(p0_id);
+        std::array<uint8_t, 40> alice{0};
+        int32_t id1 = 1;
+        int32_t age1 = 25;
+        std::memcpy(alice.data() + 0, &id1, 4);
+        std::memcpy(alice.data() + 4, "alice", 5);
+        std::memcpy(alice.data() + 36, &age1, 4);
+        p0->AppendRecord(alice.data(), tuple_size);
+
+        std::array<uint8_t, 40> bob{0};
+        int32_t id2 = 2;
+        int32_t age2 = 30;
+        std::memcpy(bob.data() + 0, &id2, 4);
+        std::memcpy(bob.data() + 4, "bob", 3);
+        std::memcpy(bob.data() + 36, &age2, 4);
+        p0->AppendRecord(bob.data(), tuple_size);
+        bpm.MarkDirty(p0_id);
+
+        // Page 1: Charlie (ID: 3, Age: 35)
+        Page *p1 = bpm.FetchPage(p1_id);
+        std::array<uint8_t, 40> charlie{0};
+        int32_t id3 = 3;
+        int32_t age3 = 35;
+        std::memcpy(charlie.data() + 0, &id3, 4);
+        std::memcpy(charlie.data() + 4, "charlie", 7);
+        std::memcpy(charlie.data() + 36, &age3, 4);
+        p1->AppendRecord(charlie.data(), tuple_size);
+        bpm.MarkDirty(p1_id);
+
+        Page *p2 = bpm.FetchPage(p2_id);
+        std::array<uint8_t, 40> donovan{0};
+        int32_t id4 = 4;
+        int32_t age4 = 40;
+        std::memcpy(donovan.data() + 0, &id4, 4);
+        std::memcpy(donovan.data() + 4, "donovan", 7);
+        std::memcpy(donovan.data() + 36, &age4, 4);
+        p2->AppendRecord(donovan.data(), tuple_size);
+
+        std::array<uint8_t, 40> eve{0};
+        int32_t id5 = 2;
+        int32_t age5 = 23;
+        std::memcpy(eve.data() + 0, &id5, 4);
+        std::memcpy(eve.data() + 4, "eve", 3);
+        std::memcpy(eve.data() + 36, &age5, 4);
+        p2->AppendRecord(eve.data(), tuple_size);
+        bpm.MarkDirty(p2_id);
+
+        // 3. TARGET PROJECTION SCHEMA: { age (0), id (1) }
+        std::vector<Column> dest_cols = {
+            {"age", TypeId::INT32, 4, 0},
+            {"id", TypeId::INT32, 4, 0}};
+        Schema dest_schema(dest_cols);
+
+        // ==========================================
+        // WIRE UP THE VOLCANO PIPELINE TREE
+        // ==========================================
+
+        // Step A: Instantiate the base sequential scanner unique pointer
+        auto scan_node = std::make_unique<SeqScanExecutor>(&exec_ctx, src_schema, disk.GetTotalPages());
+
+        // Step B: Formulate the filter predicate condition (age > 26)
+        auto col_expr = std::make_unique<ColumnValueExpression>(2); // age index
+        auto const_expr = std::make_unique<ConstantValueExpression>(Value(26));
+        auto filter_predicate = std::make_unique<ComparisonExpression>(std::move(col_expr), std::move(const_expr));
+
+        // Step C: Wrap the scan node inside the Filter Executor unique pointer
+        auto filter_node = std::make_unique<FilterExecutor>(&exec_ctx, std::move(scan_node), std::move(filter_predicate));
+
+        // Step D: Map out the projection remapping parameters
+        std::vector<std::unique_ptr<AbstractExpression>> proj_exprs;
+        proj_exprs.push_back(std::make_unique<ColumnValueExpression>(2)); // Map source age to dest col 0
+        proj_exprs.push_back(std::make_unique<ColumnValueExpression>(0)); // Map source id to dest col 1
+
+        // Step E: Wrap the filter node inside the final root Projection Executor node
+        // YOUR CODE HERE: Initialize the projection plan coordinator node
+        ProjectionExecutor plan_root(&exec_ctx, std::move(filter_node), dest_schema, std::move(proj_exprs));
+
+        // Initialize root execution pipeline
+        plan_root.Init();
+
+        Tuple t;
+        RID r;
+
+        // First execution iteration: Should filter Alice (25), skip to Bob (30), and drop "username"
+        assert(plan_root.Next(&t, &r) == true);
+        assert(t.GetInt32(dest_schema, 0) == 30); // Bob's Age mapped to index 0
+        assert(t.GetInt32(dest_schema, 1) == 2);  // Bob's ID mapped to index 1
+
+        // Second execution iteration: Should smoothly cross physical disk blocks to yield Charlie (35)
+        assert(plan_root.Next(&t, &r) == true);
+        assert(t.GetInt32(dest_schema, 0) == 35); // Charlie's Age mapped to index 0
+        assert(t.GetInt32(dest_schema, 1) == 3);  // Charlie's ID mapped to index 1
+
+        // Third execution iteration: Should smoothly cross physical disk blocks to yield Donovan (40)
+        assert(plan_root.Next(&t, &r) == true);
+        assert(t.GetInt32(dest_schema, 0) == 40); // Donovan's Age mapped to index 0
+        assert(t.GetInt32(dest_schema, 1) == 4);  // Donovan's ID mapped to index 1
+        // Final call: Plan execution complete (EOF)
+        assert(plan_root.Next(&t, &r) == false);
+
+        std::cout << "DAY 8 END-TO-END PIPELINE WORKS PERFECTLY! PHASE 2 COMPLETE!" << std::endl;
+        std::remove(filename.c_str());
+    }
+\end{lstlisting}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    % Define element styles
+    startstop/.style={rectangle, rounded corners, minimum width=2.5cm, minimum height=1cm, text centered, draw=black, fill=red!15},
+    process/.style={rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!15},
+    decision/.style={diamond, aspect=2, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!15},
+    arrow/.style={thick, ->, >=Stealth}
+]
+
+    % Place nodes sequentially downwards
+    \node (start)     [startstop] {Start};
+    \node (eof)       [decision, below=1cm of start] {is EOF?};
+    \node (seq_scan)  [process, below=1.2cm of eof] {Sequential Scan};
+    \node (filt_scan) [process, below=1.2cm of seq_scan] {Filter Scan};
+    \node (pred_chk)  [decision, below=1.2cm of filt_scan] {Predicate Check?};
+    
+    % Place the outlier nodes
+    \node (proj_exec)   [process, below=1.2cm of pred_chk] {Project target columns};
+    \node (ret_row)     [process, below=1.2cm of proj_exec] {Return Row};
+    \node (end_node)    [startstop, right=2cm of eof] {End}; % Branch EOF to end
+
+    % Draw main vertical flow connections
+    \draw [arrow] (start) -- (eof);
+    \draw [arrow] (eof) -- node[anchor=west] {No} (seq_scan);
+    \draw [arrow] (seq_scan) -- (filt_scan);
+    \draw [arrow] (filt_scan) -- (pred_chk);
+    \draw [arrow] (pred_chk) -- node[anchor=west] {Yes} (proj_exec);
+    \draw [arrow] (proj_exec) -- (ret_row);
+    
+    % EOF Yes branch to End
+    \draw [arrow] (eof) -- node[anchor=south] {Yes} (end_node);
+    
+    % Main processing loop (Predicate Check 'Yes' logic, continues vertically)
+    \draw [arrow] (ret_row.south) -- ++(0,-0.7cm) -- node[anchor=west, pos=0.2] {Next Row} ++(-2.5cm,0) |- (start.west);
+    
+    % Predicate Check 'No' branch loops back to start
+    % This loop indicates that if the predicate fails, the process immediately fetches the next row.
+    % To match the logical meaning of your original loop:
+    \draw [arrow] (pred_chk.west) -- node[anchor=south, pos=0.3] {No} ++(-1.2cm,0) |- (start.south west);
+
+\end{tikzpicture}
+\caption{Row scanning and predicate evaluation loop.}
+\label{fig:row_scan_flowchart_vert}
+\end{figure}
+
+\clearpage
+% Phase 3
+\textbf{\section{Phase 3 : The System Catalog}}
+
+% Phase 3 : Day 1
+\subsection{Day 1 : Table Metadata}
+
+\paragraph{
+    Now as we know, each database, has some sort of metadata that helps to make precise queries ahead.
+    That is exactly what this phase aims to tackle. Throughout this phase we will work with a single class
+    \textit{catalog}.
+    \newline For today we will define two functions : \newline
+    1. createTable : tableName, schema \newline
+    2. GetTableSchema : Name\newline
+    createTable takes in the name of a table, and the schema of the new table.
+    1st it checks if the table exists, if it does return false and stop.
+    Else create the table metadata. We have a fixed schema structure for table metadata in this form :
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    const Schema tab_schema({
+        {const_cast<char *>("name"), TypeId::VARCHAR, 64, 0, 1},
+        {const_cast<char *>("first_page_id"), TypeId::INT32, 4, 0, 0},
+        {const_cast<char *>("rows"), TypeId::INT32, 4, 0, 0},
+        {const_cast<char *>("schema_page_id"), TypeId::INT32, 4, 0, 0},
+        {const_cast<char *>("column_count"), TypeId::INT32, 4, 0, 0},
+    });
+
+    const Schema col_schema({
+        {const_cast<char *>("name"), TypeId::VARCHAR, 32, 0, 1},
+        {const_cast<char *>("length"), TypeId::INT32, 4, 0, 0},
+        {const_cast<char *>("type"), TypeId::INT32, 4, 0, 0},
+        {const_cast<char *>("is_in_candidate_key"), TypeId::INT32, 4, 0, 0},
+    });
+\end{lstlisting}
+
+\paragraph{
+    GetTableSchema uses our \textit{Filter Executor} from previous phase to search for whether or not the table exists.
+    It then uses the predefined \textit{tab\_schema} given above to fetch the table basic data. It uses the \textit{schema\_page\_id} field
+    to get the schema from there. Our structure is : \newline
+    1. The whole Database can be considered as a Forest of Linked Lists. \newline
+    2. The head is Page 0 which has the table Metadata. \newline
+    3. From the rows of this table, we can get 2 head for each table. \newline
+    4. One head is the starting page defining the columns of the table. \newline
+    5. The other head is the starting page of the actual rows of that table. \newline
+    6. Each list's tail points to \textit{0xFFFFFFFF} as their next page, indicating the end of list. \newline
+    Tomorrow we'll try for insertion of rows.
+}
+
+% Phase 3 : Day 2
+\newpage
+\subsection{Day 2 : Insert Intelligence}
+
+\paragraph{
+    Today we add our new function of \textit{InsertRow}. We also used some helpers like \newline
+    1. \textit{getTuple} \ : \ Validates a list of values against a given schema and returns them in a tuple ready for insertion. \newline
+    2. \textit{updateRowCount}\ : \ Updates the row count in the db metadata and writes to disk, called after write operations that change number of rows.\newline
+    3. \textit{fetchRowCount}\ : \ Fetches the row count from the table metadata. \newline
+    4. \textit{fetchRowCount\_RAW}\ : \ Calculates row count by physically reading the disk. \newline
+    Using these, our insert function inserts a list of given rows. Here atomicity is followed. If even one row is not matching with schema, we reject all.
+    We used an insertion executor for this process. It is similar in nature to the SeqScanExecutor, in how it scans pages.
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+class InsertionExecutor : public AbstractExecutor
+{
+private:
+    Schema schema_;
+
+    // Iteration state
+    uint32_t current_page_id_;
+    uint32_t previous_page_id_;
+    uint32_t pages_scanned_;
+    uint32_t start_page_id_;
+
+public:
+    InsertionExecutor(ExecutorContext *exec_ctx, const Schema &schema, uint32_t start_page_id = 0, uint32_t previous_page_id = 0xFFFFFFFF)
+        : AbstractExecutor(exec_ctx), schema_(schema), current_page_id_(start_page_id), start_page_id_(start_page_id), pages_scanned_(0), previous_page_id_(previous_page_id) {}
+
+    // Reset execution cursors to point to the very first slot on the first page
+    void Init() override;
+
+    // Insert if you can, for now returns false only if the size of the record exceeds the maximum possible slot size in a page
+    bool Next(Tuple *tuple, RID *rid) override;
+
+    // schema of insertion
+    const Schema &GetOutputSchema() const override;
+};
+\end{lstlisting}
+
+\paragraph{
+    Except this time insead of using \textit{GetTuplePtr} to read, it uses \textit{InsertTuple} to write, using our page class.
+    We have to note to mark the pages dirty as we are writing using our \textbf{BufferPoolManager}.    
+    Also we borrowed a Query operation from the future to check for duplicate rows. Oopss. Off to Day 3 \!
+}
+
+% Phase 3 : Day 3
+\newpage
+\subsection{Day 3 : Quick Queries}
+
+\paragraph{
+    Reaching the halfway point, today we will be implementing the \textit{Query} function.
+    This function needs the table name and columns to select from that table as part of main arguments.
+    Additionally, an abstract expression is accepted for filtering and also a list of names which are to be used in output.
+    By default, all rows are returned and column names are unaltered.
+    We use our full pipeline from phase 2 here, i.e. \newline
+    \textbf{SeqScan Executor - \textgreater Filter Executor - \textgreater Projection Executor} \newline
+    To help with formatting, the results are returned as a tuple of Bool (whether query was valid),
+    Schema(of the selected columns renamed) and vector of Tuple (result rows).
+}
 \end{document}
