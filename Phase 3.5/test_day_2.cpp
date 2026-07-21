@@ -33,7 +33,6 @@ int main()
     }
     {
         catalog cata(filename);
-        //duplicate
         std::vector<std::vector<Value>> vals = {{Value(3), Value("Aadil")}};
         int32_t change;
         assert(cata.InsertRow("table1", vals, &change) == true);

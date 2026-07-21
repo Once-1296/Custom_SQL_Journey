@@ -30,7 +30,7 @@ public:
     }
     const Schema &GetOutputSchema() const override
     {
-        // A update doesn't mutate rows; its output schema is identical to its child's schema
+        // A delete doesn't mutate rows; its output schema is identical to its child's schema
         return child_executor_->GetOutputSchema();
     }
 };

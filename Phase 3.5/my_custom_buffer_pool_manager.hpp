@@ -108,6 +108,7 @@ public:
     uint32_t DeletePageHelper(uint32_t page_id)
     {
         uint32_t deleted_count = 0;
+        // Delete from disk and all successors
         while (page_id != 0xFFFFFFFF)
         {
             // Remove from buffer pool if present
@@ -120,9 +121,8 @@ public:
                 lru_list.erase(it->second.list_iterator);
                 page_table.erase(it);
             }
-            page_id = page->GetNextPageId();
-            // Delete from disk and all successors
             disk_manager.DeletePage(page_id);
+            page_id = page->GetNextPageId();
             deleted_count++;
         }
         return deleted_count;

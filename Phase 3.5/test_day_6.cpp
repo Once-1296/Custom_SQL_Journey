@@ -3,60 +3,9 @@
 #include <vector>
 #include "custom_catalog.hpp"
 
-// Helper function to print tuples in a formatted SQL-like table
-void print_table(const Schema &schema, const std::vector<Tuple> &vec)
-{
-    uint32_t n = schema.GetColumnCount();
-    if (n == 0)
-        return;
-
-    // Print top border
-    std::cout << "+";
-    for (uint32_t i = 0; i < n; i++)
-        std::cout << std::string(17, '-') << "+";
-    std::cout << "\n|";
-
-    // Print column headers
-    for (uint32_t i = 0; i < n; i++)
-    {
-        std::cout << " " << std::left << std::setw(15) << schema.GetColumn(i).name << " |";
-    }
-
-    // Print separator
-    std::cout << "\n+";
-    for (uint32_t i = 0; i < n; i++)
-        std::cout << std::string(17, '-') << "+";
-    std::cout << "\n";
-
-    // Print rows
-    for (const auto &tuple : vec)
-    {
-        std::cout << "|";
-        for (uint32_t i = 0; i < n; i++)
-        {
-            const Column &col = schema.GetColumn(i);
-            if (col.type == TypeId::INT32)
-            {
-                std::cout << " " << std::left << std::setw(15) << tuple.GetInt32(schema, i) << " |";
-            }
-            else
-            {
-                std::cout << " " << std::left << std::setw(15) << tuple.GetVarchar(schema, i) << " |";
-            }
-        }
-        std::cout << "\n";
-    }
-
-    // Print bottom border
-    std::cout << "+";
-    for (uint32_t i = 0; i < n; i++)
-        std::cout << std::string(17, '-') << "+";
-    std::cout << "\n";
-}
-
 int main()
 {
-    std::string filename = "test_4.db";
+    std::string filename = "test_6.db";
     std::remove(filename.c_str());
 
     std::vector<Column> cols = {
@@ -70,8 +19,11 @@ int main()
         std::cout << "Passed Test 1: Created Table" << std::endl;
         assert(cata.createTable("student", schema) == false);
         std::cout << "Passed Test 2: Duplicate Table Rejection" << std::endl;
+        auto res = cata.GetDBMeta();
+        assert(res.empty() == false);
+        std::cout<<"DB meta"<<std::endl;
+        print_table(tab_schema, res);
     }
-
     {
         catalog cata(filename);
         Schema *schem = cata.GetTableSchema("student");
@@ -82,23 +34,22 @@ int main()
 
     {
         catalog cata(filename);
-        std::vector<Value> values = {Value(60), Value("Awwab")};
+        std::vector<std::vector<Value>> values = {{Value(60), Value("Awwab")}};
         assert(cata.InsertRow("student", values) == true);
 
         assert(cata.InsertRow("nonexist", values) == false);
 
-        values = {Value("19"), Value("Awwab")}; // Invalid type (String for INT32)
+        values = {{Value("19"), Value("Awwab")}}; // Invalid type (String for INT32)
         assert(cata.InsertRow("student", values) == false);
 
-        values = {Value(47), Value("Aadil")};
-        assert(cata.InsertRow("student", values) == true);
-
-        values = {Value(50), Value("Aribah")};
-        assert(cata.InsertRow("student", values) == true);
-
-        // Duplicate insert : must be rejected
-        assert(cata.InsertRow("student", values) == false);
-
+        values = {{Value(47), Value("Aadil")}, {Value(50), Value("Aribah")}};
+        int32_t cnt;
+        assert(cata.InsertRow("student", values, &cnt) == true);
+        std::cout<<"Inserted " << cnt<<" rows"<<std::endl;
+        // Duplicate insert
+        assert(cata.InsertRow("student", values, &cnt) == true);
+        assert(cnt == 0);
+        std::cout<<"Inserted " << cnt<<" rows"<<std::endl;
         std::cout << "Passed Test 4: Inserted Initial Values" << std::endl;
     }
 
@@ -139,11 +90,10 @@ int main()
 
         // Updates: Set Id = 99, name = "Aadil_Updated"
         std::vector<std::pair<std::string, Value>> updates = {
-            {"Id", Value(99)},
             {"name", Value("Aadil_Updated")}};
 
         assert(cata.UpdateRow("student", updates, std::move(condition)) == true);
-        std::cout << "\nPassed Test 5: Updated 'Aadil' (Id=47) to (Id=99, name='Aadil_Updated')" << std::endl;
+        std::cout << "\nPassed Test 5: Updated 'Aadil' (Id=47) to (name='Aadil_Updated')" << std::endl;
 
         // Verify update
         std::vector<std::string> target_cols = {"Id", "name"};
@@ -155,18 +105,24 @@ int main()
     std::vector<Column> cols2 = {
         {const_cast<char *>("Id"), TypeId::INT32, 4, 0, 1},
         {const_cast<char *>("name"), TypeId::VARCHAR, 20, 0, 0},
-        {const_cast<char *>("age"), TypeId::INT32, 4, 0, 1}};
+        {const_cast<char *>("marks"), TypeId::INT32, 4, 0, 0}};
     Schema schema2(cols2);
     {
         catalog cata(filename);
         assert(cata.createTable("table2", schema2) == true);
-        std::vector<Value> values = {Value(1), Value("Awwab"), Value(19)};
-        assert(cata.InsertRow("table2", values) == true);
-        values[1] = Value("Aadil");
-        assert(cata.InsertRow("table2", values) == false);
-        values[0] = Value(2);
-        assert(cata.InsertRow("table2", values) == true);
-        std::vector<std::string> target_cols = {"Id", "name", "age"};
+        auto res = cata.GetDBMeta();
+        assert(res.empty() == false);
+        std::cout<<"DB meta"<<std::endl;
+        print_table(tab_schema, res);
+        std::cout<<"Second Table Created"<<std::endl;
+    }
+    {
+        catalog cata(filename);
+        std::vector<std::vector<Value>> values = {{Value(1), Value("Awwab"), Value(95)}, {Value(4), Value("Aadil"), Value(83)}, {Value(5), Value("Aribah"), Value(100)},{Value(1), Value("Awab"), Value(100)}};
+        int32_t cnt;
+        assert(cata.InsertRow("table2", values,&cnt) == true);
+        std::cout<<"Inserted "<<cnt<<" rows"<<std::endl;
+        std::vector<std::string> target_cols = {"Id", "name", "marks"};
         auto res = cata.Query("table2", target_cols);
         assert(std::get<0>(res) == true);
 
@@ -203,8 +159,12 @@ int main()
         Schema *schem = cata.GetTableSchema("student");
         assert(schem == nullptr);
         std::cout << "Verified table 'student' no longer exists in catalog." << std::endl;
+        auto res = cata.GetDBMeta();
+        assert(res.empty() == false);
+        std::cout<<"Updated DB meta"<<std::endl;
+        print_table(tab_schema, res);
     }
-
+    std::cout<<"All tests Passed !"<<std::endl;
     std::remove(filename.c_str());
     return 0;
 }

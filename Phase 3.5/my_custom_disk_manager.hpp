@@ -84,7 +84,8 @@ public:
         db_file.clear();
         if (page_id!= 0xFFFFFFFF) {
             Page page;
-            ReadPage(page_id, page);
+            //idiot
+            // ReadPage(page_id, page);
             page.DeletePage();
             WritePage(page_id, page);
             return true;

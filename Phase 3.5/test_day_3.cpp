@@ -30,7 +30,7 @@ int main()
         assert(cata.InsertRow("nonexist", values) == false);
         values = {{Value("19"), Value("Awwab")}};
         assert(cata.InsertRow("student", values) == false);
-        values ={{Value(47), Value("Aadil")},{Value(50), Value("Aribah")}};
+        values = {{Value(47), Value("Aadil")}, {Value(50), Value("Aribah")}};
         assert(cata.InsertRow("student", values) == true);
         std::cout << "Inserted Values" << std::endl;
     }
@@ -43,35 +43,7 @@ int main()
         Schema schema = std::get<1>(res);
         uint32_t n = schema.GetColumnCount();
         std::vector<Tuple> vec = std::get<2>(res);
-        for (uint32_t j = 0; j < vec.size(); j++)
-        {
-            Tuple tuple = vec[j];
-            for (uint32_t i = 0; i < n; i++)
-            {
-                const Column &col = schema.GetColumn(i);
-                int32_t ival;
-                std::string sval;
-                if (col.type == TypeId::INT32)
-                {
-                    ival = tuple.GetInt32(schema, i);
-                }
-                else
-                {
-                    // std::cout << tuple.GetVarchar(schema, i) << std::endl;
-                    sval = tuple.GetVarchar(schema, i);
-                }
-                std::cout << "Column: " << (col.name) << " , Value: ";
-                if (col.type == TypeId::INT32)
-                {
-                    std::cout << ival;
-                }
-                else
-                {
-                    std::cout << sval;
-                }
-                std::cout << std::endl;
-            }
-        }
+        print_table(schema, vec);
     }
     {
         catalog cata(filename);
@@ -85,36 +57,27 @@ int main()
         Schema schema = std::get<1>(res);
         uint32_t n = schema.GetColumnCount();
         std::vector<Tuple> vec = std::get<2>(res);
-        for (uint32_t j = 0; j < vec.size(); j++)
-        {
-            Tuple tuple = vec[j];
-            for (uint32_t i = 0; i < n; i++)
-            {
-                const Column &col = schema.GetColumn(i);
-                int32_t ival;
-                std::string sval;
-                if (col.type == TypeId::INT32)
-                {
-                    ival = tuple.GetInt32(schema, i);
-                }
-                else
-                {
-                    // std::cout << tuple.GetVarchar(schema, i) << std::endl;
-                    sval = tuple.GetVarchar(schema, i);
-                }
-                std::cout << "Column: " << (col.name) << " , Value: ";
-                if (col.type == TypeId::INT32)
-                {
-                    std::cout << ival;
-                }
-                else
-                {
-                    std::cout << sval;
-                }
-                std::cout << std::endl;
-            }
-        }
+        print_table(schema, vec);
     }
-
+    {
+        catalog cata(filename);
+        auto res = cata.GetSchemaCols("student");
+        assert(std::get<0>(res) == true);
+        std::cout<<"Columns of student table"<<std::endl;
+        print_table(col_schema, std::get<2>(res));
+    }
+    {
+        std::vector<Column> cols2 = {
+            {const_cast<char *>("name"), TypeId::VARCHAR, 16, 0, 1},
+            {const_cast<char *>("id"), TypeId::INT32, 4, 0, 1},
+            {const_cast<char *>("age"), TypeId::INT32, 4, 0, 0}};
+        Schema schema2(cols2);
+        catalog cata(filename);
+        assert(cata.createTable("table2", schema2)==true);
+        auto res = cata.GetDBMeta();
+        assert(res.empty() == false);
+        std::cout<<"DB meta"<<std::endl;
+        print_table(tab_schema, res);
+    }
     std::remove(filename.c_str());
 }

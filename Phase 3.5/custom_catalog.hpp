@@ -6,6 +6,7 @@
 #include <cstring>
 #include <map>
 #include <cassert>
+#include <iomanip>
 #include "my_custom_buffer_pool_manager.hpp"
 #include "schema.hpp"
 #include "filter_executor.hpp"
@@ -368,6 +369,51 @@ public:
         return true;
     }
 
+    std::tuple<bool, Schema, std::vector<Tuple>> GetSchemaCols(std::string tableName)
+    {
+        uint32_t schema_page_id;
+        Schema *schema = GetTableSchema(tableName, &schema_page_id);
+        if(schema == nullptr)
+        {
+            return {false, Schema(),{}};
+        }
+        ExecutorContext ctx(*bpm_);
+        auto expr = std::make_unique<ConstantValueExpression>(ConstantValueExpression(Value(1)));
+        std::vector<std::unique_ptr<AbstractExpression>> target_cols;
+        uint32_t col_count = col_schema.GetColumnCount();
+        for(uint32_t i = 0 ; i< col_count ; i++)target_cols.push_back(std::move(std::make_unique<ColumnValueExpression>(ColumnValueExpression(i))));
+        ProjectionExecutor PE(&ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(&ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(&ctx, col_schema, 0, schema_page_id))), std::move(expr)))), col_schema, std::move(target_cols));
+        std::vector<Tuple> output;
+        PE.Init();
+        Tuple tuple;
+        RID rid;
+        while (PE.Next(&tuple, &rid))
+        {
+            output.push_back(Tuple(tuple));
+            // std::cout << tuple.GetVarchar(output_schema, 0) << std::endl;
+        }
+        return {true, col_schema, output};
+
+    }
+    std::vector<Tuple> GetDBMeta()
+    {
+        ExecutorContext ctx(*bpm_);
+        auto expr = std::make_unique<ConstantValueExpression>(ConstantValueExpression(Value(1)));
+        std::vector<std::unique_ptr<AbstractExpression>> target_cols;
+        uint32_t col_count = tab_schema.GetColumnCount();
+        for(uint32_t i = 0 ; i< col_count ; i++)target_cols.push_back(std::move(std::make_unique<ColumnValueExpression>(ColumnValueExpression(i))));
+        ProjectionExecutor PE(&ctx, std::make_unique<FilterExecutor>(std::move(FilterExecutor(&ctx, std::make_unique<SeqScanExecutor>(std::move(SeqScanExecutor(&ctx, tab_schema, 0, 0))), std::move(expr)))), tab_schema, std::move(target_cols));
+        std::vector<Tuple> output;
+        PE.Init();
+        Tuple tuple;
+        RID rid;
+        while (PE.Next(&tuple, &rid))
+        {
+            output.push_back(Tuple(tuple));
+            // std::cout << tuple.GetVarchar(output_schema, 0) << std::endl;
+        }
+        return output;
+    }
     std::tuple<bool, Schema, std::vector<Tuple>> Query(std::string tableName, std::vector<std::string> &columns, std::unique_ptr<AbstractExpression> predicate = std::make_unique<ConstantValueExpression>(std::move(ConstantValueExpression(Value(1)))), std::vector<std::string> returnColumns = {})
     {
         if (columns.empty())
@@ -439,6 +485,11 @@ public:
                 const Column &col = schema->GetColumn(i);
                 if (col.name == str)
                 {
+                    if(col.is_in_candidate_key)
+                    {
+                        // no touching primary key columns
+                        return false;
+                    }
                     exists = true;
                     break;
                 }
@@ -512,5 +563,57 @@ public:
         return true;
     }
 };
+
+// Helper print functions
+// Helper function to print tuples in a formatted SQL-like table
+void print_table(const Schema &schema, const std::vector<Tuple> &vec)
+{
+    uint32_t n = schema.GetColumnCount();
+    if (n == 0)
+        return;
+
+    // Print top border
+    std::cout << "+";
+    for (uint32_t i = 0; i < n; i++)
+        std::cout << std::string(34, '-') << "+";
+    std::cout << "\n|";
+
+    // Print column headers
+    for (uint32_t i = 0; i < n; i++)
+    {
+        std::cout << " " << std::left << std::setw(32) << schema.GetColumn(i).name << " |";
+    }
+
+    // Print separator
+    std::cout << "\n+";
+    for (uint32_t i = 0; i < n; i++)
+        std::cout << std::string(34, '-') << "+";
+    std::cout << "\n";
+
+    // Print rows
+    for (const auto &tuple : vec)
+    {
+        std::cout << "|";
+        for (uint32_t i = 0; i < n; i++)
+        {
+            const Column &col = schema.GetColumn(i);
+            if (col.type == TypeId::INT32)
+            {
+                std::cout << " " << std::left << std::setw(32) << tuple.GetInt32(schema, i) << " |";
+            }
+            else
+            {
+                std::cout << " " << std::left << std::setw(32) << tuple.GetVarchar(schema, i) << " |";
+            }
+        }
+        std::cout << "\n";
+    }
+
+    // Print bottom border
+    std::cout << "+";
+    for (uint32_t i = 0; i < n; i++)
+        std::cout << std::string(34, '-') << "+";
+    std::cout << "\n";
+}
 
 #endif

@@ -1046,7 +1046,7 @@ public:
     3. \textit{fetchRowCount}\ : \ Fetches the row count from the table metadata. \newline
     4. \textit{fetchRowCount\_RAW}\ : \ Calculates row count by physically reading the disk. \newline
     Using these, our insert function inserts a list of given rows. Here atomicity is followed. If even one row is not matching with schema, we reject all.
-    We used an insertion executor for this process. It is similar in nature to the SeqScanExecutor, in how it scans pages.
+    We used an insertion executor for this process. It is similar in nature to the SeqScanExecutor, in how it scans pages. An optional parameter helps count number of inserts, As duplicate candidate key rows are ignored.
 } \mbox{} \\
 
 \begin{lstlisting}[language=C++]
@@ -1095,5 +1095,123 @@ public:
     \textbf{SeqScan Executor - \textgreater Filter Executor - \textgreater Projection Executor} \newline
     To help with formatting, the results are returned as a tuple of Bool (whether query was valid),
     Schema(of the selected columns renamed) and vector of Tuple (result rows).
+    \newline \newline
+    We also have some new helper functions: \newline \newline \newline
+    1. \textit{print\_table} : Used to print tables. It uses a given Schema and a list of rows to print the table
+    in a format similar to postgresql/mysql in the terminal.
+    \newline \newline
+    2. \textit{GetSchemaCols} : It returns the column metadata of a table, given the name. It returns this meta data as a vector of tuples.
+    Using that and our static \textit{col\_schema}, we can easily print it with the \textit{print\_table} function.
+    \newline \newline
+    3. \textit{GetDBMeta} : It takes no argument and returns the basic info of tables. The schema of this metadata is the predefined 
+    \textit{tab\_schema}.
+    \newline \newline
+    4. \textit{makeCNF}: It is currently used for checking if the row to be inserted exists or not by making a CNF expression.
 }
+% Phase 3 : Day 4
+\newpage
+\subsection{Day 4 : Updates Underway}
+\paragraph{
+    Today we will work on \textit{UpdateRow} function. This functton updates specified columns in the given table according to some condition.
+    For simplicity of implementation, we will not allow any changes to columns that are part of the candidate key.
+    To streamline the process we have made a new executor for updates as well, as given below.
+} \mbox{} \\
+\begin{lstlisting}[language=C++]
+class UpdateExecutor : public AbstractExecutor
+{
+private:
+    // child is mostly a filter executor
+    std::unique_ptr<AbstractExecutor> child_executor_;
+    std::map<std::string, Value> col_value_map_;
+
+public:
+    UpdateExecutor(ExecutorContext *exec_ctx, std::unique_ptr<AbstractExecutor> child_executor, std::map<std::string, Value> col_value_map) : AbstractExecutor(exec_ctx), child_executor_(std::move(child_executor)), col_value_map_(col_value_map) {}
+
+    // Initialize child
+    void Init() override
+    
+    // Update rows given by child or hit eof
+    bool Next(Tuple *tuple, RID *rid) override
+
+    // A update doesn't mutate rows; its output schema is identical to its child's schema
+    const Schema &GetOutputSchema() const override
+};
+\end{lstlisting}
+
+\paragraph{
+    This executor is also used in certain other places such as updating metadata as well like rowcount.
+    Much like Insert, it is first ensured that the update is valid, before being actually implemented.
+    Also an extra pointer variable/address can be supplied to fetch the count of affected rows.
+}
+
+% Phase 3 : Day 5
+\newpage
+\subsection{Day 5 : Delete Dance}
+\paragraph{
+    Finally we close out the last functions based on Deleting rows and entire Table.
+    For Deleting a row, we introduce a new executor : \textit{DeleteExecutor} , which functions quite similarly to update.
+    Here after the child executor returns the rows according to the conditions, we use our previously defined delete function from our page class.
+    An overview of this new executor is given below.
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+class DeleteExecutor : public AbstractExecutor
+{
+private:
+    // child, mostly filter executor
+    std::unique_ptr<AbstractExecutor> child_executor_;
+public:
+    DeleteExecutor(ExecutorContext *exec_ctx, std::unique_ptr<AbstractExecutor> child_executor) : AbstractExecutor(exec_ctx), child_executor_(std::move(child_executor)){}
+
+    // Initialise child
+    void Init() override
+
+    // Delete the row given by child
+    bool Next(Tuple *tuple, RID *rid) override
+
+    // A delete doesn't mutate rows; its output schema is identical to its child's schema
+    const Schema &GetOutputSchema() const override
+};
+\end{lstlisting}
+
+\paragraph{
+    On the other hand for deleting table we needed a few adjustments to our Page class.
+    Keeping in line with our tombstone style delete, we add an extra flag in the header which indicates whether it is alive or not.
+    To delete a page, we overwrite the bytes of everything else to default state and change this flag.
+    This way we dont have to fragment memory as such. And these "dead" pages can be reused in our updated \textit{AllocatePage} function from
+    our disk manager. A small snippet of important points below :
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+    //new functions in Page class
+    // sets alive page off (tombstone)
+    void DeletePage()
+
+    // check whether page is alive or not
+    bool isAlive()
+
+    //caller from disk manager to delete a page
+    bool DeletePage(uint32_t page_id)
+
+    //buffer pool manager caller
+    // remove from Buffer Pool and call delete on the page and its successors
+    uint32_t DeletePageHelper(uint32_t page_id)
+
+    // function in catalog
+    bool DeleteTable(std::string tableName)
+\end{lstlisting}
+
+% Phase 3 : Day 6
+\newpage
+\subsection{Day 6 : I'm Tired Boss}
+\paragraph{
+    Finally we reached the end of Phase 3. This was the brain and heart of our project.
+    This will now seamlessly be connected to the parser and frontend that will allow to execute the commands from the terminal !
+    To recap, in this phase , we :\newline
+    1. Made the catalog class with support to handle creation and deletion of tables, insertion, updation and deletion of rows, querying the table and some helper functions. \newline
+    2. Made 3 new executors for insert, update and delete. \newline
+    3. Updated Page, DiskManager, and BufferPoolManager classes. \newline
+    4. Conducted extensive testing to the best of my ability to ensure no bugs or vulnerabilities are exploited. \newline 
+}
+
 \end{document}
