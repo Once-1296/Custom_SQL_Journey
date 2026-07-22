@@ -978,7 +978,6 @@ public:
     
     % Predicate Check 'No' branch loops back to start
     % This loop indicates that if the predicate fails, the process immediately fetches the next row.
-    % To match the logical meaning of your original loop:
     \draw [arrow] (pred_chk.west) -- node[anchor=south, pos=0.3] {No} ++(-1.2cm,0) |- (start.south west);
 
 \end{tikzpicture}
@@ -1205,7 +1204,7 @@ public:
 \newpage
 \subsection{Day 6 : I'm Tired Boss}
 \paragraph{
-    Finally we reached the end of Phase 3. This was the brain and heart of our project.
+    Finally we reached the end of Phase 3. This was the brain and heart of our project, as you can see it above.
     This will now seamlessly be connected to the parser and frontend that will allow to execute the commands from the terminal !
     To recap, in this phase , we :\newline
     1. Made the catalog class with support to handle creation and deletion of tables, insertion, updation and deletion of rows, querying the table and some helper functions. \newline
@@ -1213,5 +1212,52 @@ public:
     3. Updated Page, DiskManager, and BufferPoolManager classes. \newline
     4. Conducted extensive testing to the best of my ability to ensure no bugs or vulnerabilities are exploited. \newline 
 }
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    % Define element styles
+    startstop/.style={rectangle, rounded corners, minimum width=2.5cm, minimum height=1cm, text centered, draw=black, fill=red!15},
+    process/.style={rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!15},
+    decision/.style={diamond, aspect=2, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!15},
+    arrow/.style={thick, ->, >=Stealth}
+]
+
+    % Place nodes sequentially downwards
+    \node (start)     [startstop] {Start};
+    \node (init)       [process, below=0.6cm of start] {Catalog creates .db file if it doesn't exist};
+    \node (fetch_meta)  [process, below=0.6cm of init] {Fetch relevant information from metadata from Page 0};
+    \node (validate) [decision, below=0.6cm of fetch_meta] {Validate the input operation};
+    \node (execute)  [process, below=0.6cm of validate] {Use relevant Executors for operation};
+    \node (commit)  [process, below=0.6cm of execute] {Save to DB};
+    % Place the outlier nodes
+    \node (end_node)    [startstop, right=2cm of init] {End}; % Branch to end
+
+    % Draw main vertical flow connections
+    \draw [arrow] (start) -- (init);
+    \draw [arrow] (init) -- (fetch_meta);
+    \draw [arrow] (fetch_meta) -- (validate);
+    \draw [arrow] (validate) -- node[anchor=west] {Yes} (execute);
+    \draw [arrow] (execute) -- (commit);
+    
+    % branch to End
+    \draw [arrow] (init) -- (end_node);
+    
+    % Main processing loop
+    \draw [arrow] (commit.south) -- ++(0,-0.7cm) -- node[anchor=west, pos=0.3] {Next Operation} ++(-4.5cm,0) |- (init.west);
+    
+    % Validation 'No' branch loops back to init
+    % This loop indicates that if the validation fails, the operation is not peformed at all.
+    \draw [arrow] (validate.west) -- node[anchor=south, pos=0.3] {No} ++(-2.5cm,0) |- (init.south west);
+
+\end{tikzpicture}
+\caption{Catalog Operation Loop}
+\label{fig:catalog_flowchart}
+\end{figure}
+
+\clearpage
+% Phase 4 : yet to come
+\textbf{\section{Phase 4: Automata PTSD}}
+
 
 \end{document}

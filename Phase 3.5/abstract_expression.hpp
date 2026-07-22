@@ -62,7 +62,7 @@ public:
     }
 };
 
-// Represents a binary comparison operation (For today, we will explicitly implement GT '>')
+// Represents a binary comparison operation 
 class ComparisonExpression : public AbstractExpression
 {
 private:
@@ -88,6 +88,36 @@ public:
 
         // Write your comparison logic here
         int32_t result = (left_int > right_int) ? 1 : 0;
+        return Value(result);
+    }
+};
+
+// Represents a binary comparison operation 
+class ComparisonLesserExpression : public AbstractExpression
+{
+private:
+    std::unique_ptr<AbstractExpression> left_;
+    std::unique_ptr<AbstractExpression> right_;
+
+public:
+    ComparisonLesserExpression(std::unique_ptr<AbstractExpression> left, std::unique_ptr<AbstractExpression> right)
+        : left_(std::move(left)), right_(std::move(right)) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        Value lhs = left_->Evaluate(tuple, schema);
+        Value rhs = right_->Evaluate(tuple, schema);
+
+        bool is_valid_expr = true;
+        // Ensure both left-hand and right-hand evaluations result in TypeId::INT32.
+        assert(lhs.GetType() == rhs.GetType() && lhs.GetType() == TypeId::INT32 && "Unsupported types for comparison");
+        // Perform a lesser-than comparison (lhs < rhs) and return the result.
+        int32_t left_int = lhs.AsInt32(), right_int = rhs.AsInt32();
+        // Hint: Since our engine lacks a BOOLEAN TypeId right now, represent standard SQL truth
+        // by returning an INT32 Value where 1 = true and 0 = false.
+
+        // Write your comparison logic here
+        int32_t result = (left_int < right_int) ? 1 : 0;
         return Value(result);
     }
 };
@@ -132,7 +162,7 @@ public:
         bool is_valid_expr = true;
         // Ensure both left-hand and right-hand evaluations result in TypeId::INT32.
         assert(lhs.GetType() == rhs.GetType() && "Unsupported types for comparison");
-        // Perform a greater-than comparison (lhs > rhs) and return the result.
+        // Perform a equal to comparison (lhs == rhs) and return the result.
         if (lhs.GetType() == TypeId::INT32)
         {
             int32_t left_int = lhs.AsInt32(), right_int = rhs.AsInt32();
@@ -144,6 +174,146 @@ public:
         std::string left_str = lhs.AsVarchar(), right_str = rhs.AsVarchar();
         // Write your comparison logic here
         int32_t result = (left_str == right_str) ? 1 : 0;
+        return Value(result);
+    }
+};
+
+class NotEqualExpression : public AbstractExpression
+{
+private:
+    std::unique_ptr<AbstractExpression> left_;
+    std::unique_ptr<AbstractExpression> right_;
+
+public:
+    NotEqualExpression(std::unique_ptr<AbstractExpression> left, std::unique_ptr<AbstractExpression> right)
+        : left_(std::move(left)), right_(std::move(right)) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        Value lhs = left_->Evaluate(tuple, schema);
+        Value rhs = right_->Evaluate(tuple, schema);
+        bool is_valid_expr = true;
+        // Ensure both left-hand and right-hand evaluations result in TypeId::INT32.
+        assert(lhs.GetType() == rhs.GetType() && "Unsupported types for comparison");
+        // Perform a not equal (lhs != rhs) comparison and return the result.
+        if (lhs.GetType() == TypeId::INT32)
+        {
+            int32_t left_int = lhs.AsInt32(), right_int = rhs.AsInt32();
+
+            // Write your comparison logic here
+            int32_t result = (left_int != right_int) ? 1 : 0;
+            return Value(result);
+        }
+        std::string left_str = lhs.AsVarchar(), right_str = rhs.AsVarchar();
+        // Write your comparison logic here
+        int32_t result = (left_str != right_str) ? 1 : 0;
+        return Value(result);
+    }
+};
+
+// Represents a prefix match
+class PrefixMatchExpression : public AbstractExpression
+{
+private:
+    std::unique_ptr<AbstractExpression> left_;
+    std::unique_ptr<AbstractExpression> right_;
+
+public:
+    PrefixMatchExpression(std::unique_ptr<AbstractExpression> left, std::unique_ptr<AbstractExpression> right)
+        : left_(std::move(left)), right_(std::move(right)) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        Value lhs = left_->Evaluate(tuple, schema);
+        Value rhs = right_->Evaluate(tuple, schema);
+
+        bool is_valid_expr = true;
+        // Ensure both left-hand and right-hand evaluations result in TypeId::VARCHAR.
+        assert(lhs.GetType() == rhs.GetType() && lhs.GetType() == TypeId::VARCHAR && "Unsupported types for comparison");
+        std::string left_str = lhs.AsVarchar(), right_str = rhs.AsVarchar();
+        bool flag = 1;
+        // Write your comparison logic here
+        // is left_str a prefix of right_str?
+        uint32_t l_n = left_str.size(), r_n = right_str.size(), i =0;
+        for( ;i < l_n && i<r_n;i++)
+        {
+            flag = left_str[i] == right_str[i];
+            if(!flag)break;
+        }
+        flag = i == l_n;
+        int32_t result = (flag) ? 1 : 0;
+        return Value(result);
+    }
+};
+
+// Represents a suffix match
+class SuffixMatchExpression : public AbstractExpression
+{
+private:
+    std::unique_ptr<AbstractExpression> left_;
+    std::unique_ptr<AbstractExpression> right_;
+
+public:
+    SuffixMatchExpression(std::unique_ptr<AbstractExpression> left, std::unique_ptr<AbstractExpression> right)
+        : left_(std::move(left)), right_(std::move(right)) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        Value lhs = left_->Evaluate(tuple, schema);
+        Value rhs = right_->Evaluate(tuple, schema);
+
+        bool is_valid_expr = true;
+        // Ensure both left-hand and right-hand evaluations result in TypeId::VARCHAR.
+        assert(lhs.GetType() == rhs.GetType() && lhs.GetType() == TypeId::VARCHAR && "Unsupported types for comparison");
+        std::string left_str = lhs.AsVarchar(), right_str = rhs.AsVarchar();
+        bool flag = 1;
+        // Write your comparison logic here
+        // is left_str a suffix of right_str?
+        uint32_t l_n = left_str.size(), r_n = right_str.size(), i =l_n-1, j= r_n - 1;
+        for( ;i >= 0 && j>=0;i--,j--)
+        {
+            flag = left_str[i] == right_str[j];
+            if(!flag)break;
+        }
+        flag = i < 0;
+        int32_t result = (flag) ? 1 : 0;
+        return Value(result);
+    }
+};
+
+// Represents a subsequence match
+class SubSeqMatchExpression : public AbstractExpression
+{
+private:
+    std::unique_ptr<AbstractExpression> left_;
+    std::unique_ptr<AbstractExpression> right_;
+
+public:
+    SubSeqMatchExpression(std::unique_ptr<AbstractExpression> left, std::unique_ptr<AbstractExpression> right)
+        : left_(std::move(left)), right_(std::move(right)) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        Value lhs = left_->Evaluate(tuple, schema);
+        Value rhs = right_->Evaluate(tuple, schema);
+
+        bool is_valid_expr = true;
+        // Ensure both left-hand and right-hand evaluations result in TypeId::VARCHAR.
+        assert(lhs.GetType() == rhs.GetType() && lhs.GetType() == TypeId::VARCHAR && "Unsupported types for comparison");
+        std::string left_str = lhs.AsVarchar(), right_str = rhs.AsVarchar();
+        bool flag = 1;
+        // Write your comparison logic here
+        // is left_str a subsequence of right_str?
+        uint32_t l_n = left_str.size(), r_n = right_str.size(), i =0, j= 0;
+        for( ;i < l_n && j < r_n;j++)
+        {
+            if(left_str[i] == right_str[j])
+            {
+                i++;
+            }
+        }
+        flag = i == l_n;
+        int32_t result = (flag) ? 1 : 0;
         return Value(result);
     }
 };
