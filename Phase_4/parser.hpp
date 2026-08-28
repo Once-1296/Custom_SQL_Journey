@@ -71,7 +71,7 @@ public:
         std::stack<Token *> stk;
         stk.push(&root);
         std::string current = "";
-        bool nextShouldBeSpace = false;
+        bool checkNextCharacter = false;
         bool error = false;
         std::string errorMessage = "";
         int mode = 0;
@@ -95,17 +95,20 @@ public:
                 current.clear();
             }
         };
-
+        std::string allowed = " ";
         for (auto &c : query)
         {
-            if (c != ' ' && nextShouldBeSpace)
+            if (checkNextCharacter)
             {
-                error = true;
-                errorMessage = "Missing a Space Somewhere.";
-                break;
+                if (allowed.find(c) == std::string::npos)
+                {
+                    error = true;
+                    errorMessage = "Missing a Space Somewhere.";
+                    break;
+                }
             }
-            nextShouldBeSpace = false;
-
+            checkNextCharacter = false;
+            allowed = " ";
             if (c == ' ')
             {
                 if (mode == 2 || mode == 3)
@@ -142,7 +145,7 @@ public:
                     errorMessage = "Cannot put * in quotes/brackets or lack of proper space.";
                     break;
                 }
-                nextShouldBeSpace = true;
+                checkNextCharacter = true;
                 Token *sep = new Token(TokenType::STAR);
                 if (!stk.empty())
                     stk.top()->addChild(sep);
@@ -212,7 +215,8 @@ public:
                         break;
                     }
                     stk.pop();
-                    nextShouldBeSpace = true;
+                    checkNextCharacter = true;
+                    allowed = " ,)(;";
                     mode = (mode == 3) ? 1 : 0;
                 }
                 else
@@ -265,7 +269,7 @@ public:
             if (cur.getType() == TokenType::BRACKET_VALUES || cur.getType() == TokenType::QUOTES)
             {
                 // std::cout<<"2\n";
-                std::cout<<start<<((cur.getType() == TokenType::BRACKET_VALUES)?"(":"\"")<<std::endl;
+                std::cout << start << ((cur.getType() == TokenType::BRACKET_VALUES) ? "(" : "\"") << "\n";
                 currentIndent += indent;
                 has_child = true;
             }
@@ -291,7 +295,7 @@ public:
             {
                 for (uint32_t i = 0; i < indent.size(); i++)
                     currentIndent.pop_back();
-                std::cout<<currentIndent<<((cur.getType() == TokenType::BRACKET_VALUES)?")":"\"")<<std::endl;
+                std::cout << currentIndent << ((cur.getType() == TokenType::BRACKET_VALUES) ? ")" : "\"") << "\n";
             }
         };
         dfs(dfs, root);
