@@ -42,9 +42,9 @@ public:
         return out;
     }
 
-    bool isAlphaNum(char &c)
+    bool isAlphaNum_(char &c)
     {
-        return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'));
+        return ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_');
     }
     bool isOperator(char &c)
     {
@@ -120,7 +120,7 @@ public:
                     push_current();
                 }
             }
-            else if (isAlphaNum(c))
+            else if (isAlphaNum_(c))
             {
                 current.push_back(c);
             }
@@ -247,6 +247,11 @@ public:
                     break;
                 }
                 push_current();
+            }
+            else{
+                error = true;
+                errorMessage = "Invalid character somewhere";
+                break;
             }
         }
 

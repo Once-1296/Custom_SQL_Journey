@@ -70,7 +70,7 @@ int main(){
     std::cout<<"\n-------------------------------------------------------\n";
     {
         Token root(TokenType::ROOT);
-        std::string query = "CREATE TABLE Jobs ( ID INT 4, SALARY INT 4, NAME VARCHAR 20, PRIMARY KEY (ID) );";
+        std::string query = "CREATE TABLE Jobs ( ID INT 4, SALARY INT 4, COMPANY_NAME VARCHAR 20, PRIMARY KEY (ID) );";
         assert(parser.parseIntoTokens(query, root) == true);
         std::cout<<"Parsing Test 9 completed !"<<std::endl;
         parser.printParsedTokens(root);
