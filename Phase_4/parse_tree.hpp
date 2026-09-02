@@ -82,6 +82,13 @@ public:
     }
 
     const std::vector<Token*>& getChildren() const { return children; }
+
+    const Token* getChildI(int i) const {
+        if(i >= children.size() || i < 0){
+            return nullptr;
+        }
+        return children[i];
+    }
 };
 
 #endif
