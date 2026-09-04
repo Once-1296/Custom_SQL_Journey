@@ -3,31 +3,26 @@
 
 #include "parse_tree.hpp"
 
-bool identifyCommand(Token &root){
+int identifyCommand(Token &root, std::string &Message){
     const Token *firstChild = root.getChildI(0);
-    bool error = false;
-    std::string errorMessage = "";
+    
     if(firstChild == nullptr){
-        errorMessage = "Invalid token at first word.";
-        error = true;
-        std::cout<<errorMessage<<std::endl;
-        return !error;
+        Message = "Invalid token at first word.";
+        return -1;
     }
     if(firstChild -> getValue() == Value("SHOW")){
         const Token *secondChild = root.getChildI(1);
         if(secondChild == nullptr){
-            errorMessage = "No token after SHOW";
-            error = true;
-            std::cout<<errorMessage<<std::endl;
-            return !error;
+            Message = "No token after SHOW";
+            return -1;
         }
         Value v = secondChild->getValue();
         if(v == Value("DATABASES")){
-            return true;
+            return 0;
         }
-        return false;
+        return -1;
     }
-    return false;
+    return -1;
 }
 
 #endif

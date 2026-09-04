@@ -1,15 +1,15 @@
 #include <iostream>
 #include <cassert>
-#include "parser.hpp"
-#include "command_interpreter.hpp"
-#include "command_caller.hpp"
-int main() {
-    Caller caller;
-    Token root(TokenType::ROOT);
+#include "compiler.hpp"
+int main(int argc, char* argv[]) {
+    std::string p = ".";
+    if(argc > 1){
+        char* path = argv[1];
+        p = path;
+    }
+    std::cout<<p<<std::endl;
+    Compiler compiler(p);
     std::string qry = "SHOW DATABASES;";
-    Parser parser;
-    parser.parseIntoTokens(qry, root);
-    assert(identifyCommand(root)==true);
-    caller.showDBs();
+    assert(compiler.query(qry) == true);
     return 0;
 }
