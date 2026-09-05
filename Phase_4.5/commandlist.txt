@@ -1,0 +1,27 @@
+Databases:
+SHOW DATABASES;
+CREATE DATABASE "db_name";
+LINK DATABASE "db_name";
+UNLINK DATABASE;
+DELETE DATABASE "db_name";
+
+Tables:
+SHOW TABLES;
+SHOW TABLE SCHEMA "table_name";
+DELETE TABLE "table_name";
+CREATE TABLE "table_name" (
+"col1_name" <TYPE> <SIZE>,
+"col2_name" <TYPE> <SIZE>,
+...,
+PRIMARY KEY ("col1_name",...)
+);
+
+Queries:
+INSERT INTO "table_name" VALUES (<value_1>, <value_2>, ...), (...), ... ;
+SELECT "col1_name", "col2_name", ...
+FROM "table_name"
+WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;
+UPDATE "table_name" SET "col1_name" = <value_1> , "col2_name" = <value_2>, ...
+WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;
+DELETE FROM "table_name"
+WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;
