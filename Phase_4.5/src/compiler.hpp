@@ -20,6 +20,11 @@ public:
     Compiler(std::string path = ".") : root_path(path)
     {
     }
+    ~Compiler(){
+        if(cata != nullptr){
+            delete cata;
+        }
+    }
     bool query(std::string &query,bool debugLexer = false)
     {
         std::vector<Token> tokens;
