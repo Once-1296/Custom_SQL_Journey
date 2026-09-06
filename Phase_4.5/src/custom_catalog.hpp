@@ -567,7 +567,7 @@ public:
 
 // Helper print functions
 // Helper function to print tuples in a formatted SQL-like table
-void print_table(const Schema &schema, const std::vector<Tuple> &vec)
+void print_table(const Schema &schema, const std::vector<Tuple> &vec, bool isSchemaPrint=false)
 {
     uint32_t n = schema.GetColumnCount();
     if (n == 0)
@@ -600,7 +600,11 @@ void print_table(const Schema &schema, const std::vector<Tuple> &vec)
             const Column &col = schema.GetColumn(i);
             if (col.type == TypeId::INT32)
             {
-                std::cout << " " << std::left << std::setw(32) << tuple.GetInt32(schema, i) << " |";
+                if(isSchemaPrint && i==2){
+                    std::string colType = (tuple.GetInt32(schema, i) == 0) ? "VARCHAR" : "INT";
+                    std::cout << " " << std::left << std::setw(32) << colType << " |";
+                }
+                else std::cout << " " << std::left << std::setw(32) << tuple.GetInt32(schema, i) << " |";
             }
             else
             {

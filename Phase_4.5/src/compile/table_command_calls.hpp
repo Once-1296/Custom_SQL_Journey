@@ -77,7 +77,7 @@ bool showTBSchema(std::vector<Token> &tokens, std::string &Message, catalog *&ca
         return false;
     }
     std::cout << "Columns of " << tableName << " table" << std::endl;
-    print_table(col_schema, std::get<2>(res));
+    print_table(col_schema, std::get<2>(res), true);
     return true;
 }
 bool delTB(std::vector<Token> &tokens, std::string &Message, catalog *&cata)
