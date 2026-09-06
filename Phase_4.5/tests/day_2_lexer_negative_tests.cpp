@@ -65,6 +65,16 @@ int main() {
                     "Invalid character.", 
                     "Negative Test 8 (Invalid character)");
 
+    // 9. Overflow error
+    runNegativeTest(lex, "UPDATE TABLE mytable SET ID = 10000000000000000000;", 
+                    "Integer overflow/underflow detected: 10000000000000000000", 
+                    "Negative Test 9 (Integer overflow)");
+    
+    // 10. Underflow error
+    runNegativeTest(lex, "UPDATE TABLE mytable SET ID = -10000000000000000000;", 
+                    "Integer overflow/underflow detected: -10000000000000000000", 
+                    "Negative Test 10 (Integer underflow)");
+
     std::cout << "                   ALL NEGATIVE TESTS PASSED           \n";
     std::cout << "=======================================================\n";
 

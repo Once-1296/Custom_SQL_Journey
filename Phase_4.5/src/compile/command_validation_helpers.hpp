@@ -107,7 +107,7 @@ std::pair<bool, bool> fileExists(DIR *&dir, struct dirent *&entry, std::string &
     return {true, exists};
 }
 
-bool isValidTableName(std::string tableName, std::string &Message){
+bool isValidTableName(std::string &tableName, std::string &Message){
     while(!tableName.empty() &&tableName.back() == ' ')tableName.pop_back();
     while(!tableName.empty() && *tableName.begin() == ' ')tableName.erase(tableName.begin());
     if(tableName.size() == 0){
@@ -127,11 +127,31 @@ bool isValidTableName(std::string tableName, std::string &Message){
     return true;
 }
 
+bool isValidColName(std::string &colName, std::string &Message){
+    while(!colName.empty() &&colName.back() == ' ')colName.pop_back();
+    while(!colName.empty() && *colName.begin() == ' ')colName.erase(colName.begin());
+    if(colName.size() == 0){
+        Message = "Column Name is empty";
+        return false;
+    }
+    if(colName.size() >= 32){
+        Message = "Column Name is too long";
+        return false;
+    }
+    for(auto&c:colName){
+        if(!isAlphaNumUS(c) && c!=' '){
+            Message = "Invalid character " + c;
+            return false;
+        }
+    }
+    return true;
+}
+
 bool checkCol(int i, std::vector<Token> &tokens, std::string &Message, std::map<std::string, std::tuple<TypeId, uint32_t, uint32_t>> &curCols, int pos_i)
 {
     std::string colName = std::get<0>(tokens[i].value);
-    if(colName.size () >= 32){
-        Message = "Some Column Name is too large.";
+    bool checkColName = isValidColName(colName, Message);
+    if(!checkColName){
         return false;
     }
     if(curCols.find(colName) != curCols.end()){

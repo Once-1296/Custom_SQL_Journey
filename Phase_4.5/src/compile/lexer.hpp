@@ -5,6 +5,7 @@
 #include <stack>
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 #include "../types/Token.hpp"
 #include "../types/token_trie.hpp"
 
@@ -41,7 +42,6 @@ public:
 
     ~lexer() { delete root; }
 
-    // Print Function Included Directly in Lexer
     void printTokens(const std::vector<Token> &tokens)
     {
         for (const auto &tok : tokens)
@@ -51,42 +51,14 @@ public:
             else
                 std::cout << std::get<1>(tok.value);
 
-            std::cout << " : ";
-            switch (tok.type)
-            {
-            case STR:
-                std::cout << "STR";
-                break;
-            case INT:
-                std::cout << "INT";
-                break;
-            case KEYWORD:
-                std::cout << "KEYWORD";
-                break;
-            case OPERATOR:
-                std::cout << "OPERATOR";
-                break;
-            case BRACKET_OPEN:
-                std::cout << "BRACKET_OPEN";
-                break;
-            case BRACKET_CLOSE:
-                std::cout << "BRACKET_CLOSE";
-                break;
-            case COMMA:
-                std::cout << "COMMA";
-                break;
-            case FORCE_STR:
-                std::cout << "QUOTED STR";
-                break;
-            }
-            std::cout << '\n';
+            std::cout << " : " << printType(tok.type) << '\n';
         }
     }
 
-    // Pass query by value to safely modify without destroying user's original string
     bool lex(std::string query, std::vector<Token> &tokens, std::string &Message)
     {
-        if(!tokens.empty()){
+        if (!tokens.empty())
+        {
             tokens.clear();
         }
         bool error = false;
@@ -103,15 +75,14 @@ public:
         bool isInQuotes = false;
         int bracketCount = 0;
 
-        auto push = [&tokens, &st](bool forceString = false) -> void
+        // Returns false if an overflow/underflow occurs
+        auto push = [&tokens, &st, &Message](bool forceString = false) -> bool
         {
             if (st.empty())
-                return;
+                return true;
 
             tokenType type = tokenType::INT;
-            bool isint = true;
 
-            // Check trie value *before* emptying stack
             if (!forceString && st.top().second != nullptr)
             {
                 std::optional<Token> value = st.top().second->getValue();
@@ -123,7 +94,6 @@ public:
             while (!st.empty())
             {
                 true_s.push_back(st.top().first);
-                isint = isint && (st.top().first >= '0' && st.top().first <= '9');
                 st.pop();
             }
             std::reverse(true_s.begin(), true_s.end());
@@ -131,7 +101,27 @@ public:
             if (forceString)
             {
                 tokens.push_back({tokenType::FORCE_STR, true_s});
-                return;
+                return true;
+            }
+
+            // Check if string is a valid integer (including negative signs)
+            bool isint = !true_s.empty();
+            size_t start_idx = 0;
+            if (true_s[0] == '-')
+            {
+                if (true_s.size() == 1)
+                    isint = false;
+                else
+                    start_idx = 1;
+            }
+
+            for (size_t i = start_idx; i < true_s.size(); ++i)
+            {
+                if (true_s[i] < '0' || true_s[i] > '9')
+                {
+                    isint = false;
+                    break;
+                }
             }
 
             if (!isint && type == tokenType::INT)
@@ -147,24 +137,49 @@ public:
             }
 
             if (isint)
-                tokens.push_back({type, std::stoi(true_s)});
+            {
+                try
+                {
+                    int val = std::stoi(true_s);
+                    tokens.push_back({type, val});
+                }
+                catch (const std::out_of_range &e)
+                {
+                    Message = "Integer overflow/underflow detected: " + true_s;
+                    return false;
+                }
+                catch (const std::invalid_argument &e)
+                {
+                    tokens.push_back({tokenType::STR, true_s});
+                }
+            }
             else
+            {
                 tokens.push_back({type, true_s});
+            }
+            return true;
         };
 
-        for (auto &c : query)
+        for (size_t i = 0; i < query.size(); ++i)
         {
+            char c = query[i];
+
             if (isInQuotes)
             {
                 if (c == '"')
                 {
-                    push(true); // Force quote contents to be STR
+                    if (!push(true)) { error = true; break; }
                     isInQuotes = false;
                 }
                 else
                 {
-                    st.push({c, nullptr}); // Anything is allowed in quotes
+                    st.push({c, nullptr});
                 }
+            }
+            // Check for negative numbers (glued '-' before a digit when st is empty)
+            else if (c == '-' && st.empty() && (i + 1 < query.size()) && isNum(query[i + 1]))
+            {
+                st.push({c, nullptr});
             }
             else if (isAlphaNumUS(c))
             {
@@ -195,11 +210,11 @@ public:
             }
             else if (c == ' ')
             {
-                push();
+                if (!push()) { error = true; break; }
             }
             else if (c == ',')
             {
-                push();
+                if (!push()) { error = true; break; }
                 tokens.push_back({tokenType::COMMA, ","});
             }
             else if (c == '(')
@@ -222,12 +237,12 @@ public:
                     break;
                 }
                 bracketCount--;
-                push();
+                if (!push()) { error = true; break; }
                 tokens.push_back({tokenType::BRACKET_CLOSE, ")"});
             }
             else if (isOperator(c))
             {
-                push();
+                if (!push()) { error = true; break; }
                 if (!tokens.empty())
                 {
                     Token tp = tokens.back();
@@ -254,16 +269,12 @@ public:
                         tokens.push_back({tokenType::OPERATOR, op});
                         continue;
                     }
-                    tokens.push_back({tokenType::OPERATOR, std::string(1, c)});
                 }
-                else
-                {
-                    tokens.push_back({tokenType::OPERATOR, std::string(1, c)});
-                }
+                tokens.push_back({tokenType::OPERATOR, std::string(1, c)});
             }
             else if (c == ';')
             {
-                push();
+                if (!push()) { error = true; break; }
                 if (bracketCount > 0)
                 {
                     Message = "Open brackets not closed.";
@@ -284,11 +295,13 @@ public:
                 break;
             }
         }
-        if (isInQuotes)
+
+        if (isInQuotes && !error)
         {
             Message = "Unclosed quotes.";
             error = true;
         }
+
         return !error;
     }
 };

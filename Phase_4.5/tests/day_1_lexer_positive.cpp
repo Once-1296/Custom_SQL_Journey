@@ -42,6 +42,7 @@ int main() {
     // 2 New Tests for Lexer Features
     runTest(lex, "SELECT ALL FROM \"Users\" WHERE name STARTSWITH \"A\";", "New Test 14 (String Operators)");
     runTest(lex, "UPDATE \"Stats\" SET score = (100 + 2) * (4 - 9);", "New Test 15 (Math Operators & Brackets)");
+    runTest(lex, "INSERT INTO Marks VALUES (1, \"AB\",-100),(3, \"kl\", -901);", "New Test 16 (Negative Numbers");
 
     std::cout << "                   ALL POSITIVE TESTS PASSED           \n";
     std::cout << "=======================================================\n";
