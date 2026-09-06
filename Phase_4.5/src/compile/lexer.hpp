@@ -5,8 +5,8 @@
 #include <stack>
 #include <vector>
 #include <algorithm>
-#include "Token.hpp"
-#include "token_trie.hpp"
+#include "../types/Token.hpp"
+#include "../types/token_trie.hpp"
 
 class lexer
 {
@@ -75,6 +75,9 @@ public:
             case COMMA:
                 std::cout << "COMMA";
                 break;
+            case FORCE_STR:
+                std::cout << "QUOTED STR";
+                break;
             }
             std::cout << '\n';
         }
@@ -127,7 +130,7 @@ public:
 
             if (forceString)
             {
-                tokens.push_back({tokenType::STR, true_s});
+                tokens.push_back({tokenType::FORCE_STR, true_s});
                 return;
             }
 

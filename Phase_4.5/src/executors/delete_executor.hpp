@@ -1,8 +1,8 @@
 #ifndef DELETE_EXECUTOR_HPP
 #define DELETE_EXECUTOR_HPP
 
-#include "abstract_executor.hpp"
-#include "abstract_expression.hpp"
+#include "../abstract_executor.hpp"
+#include "../abstract_expression.hpp"
 #include <map>
 
 class DeleteExecutor : public AbstractExecutor

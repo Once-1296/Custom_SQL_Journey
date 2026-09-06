@@ -3,9 +3,10 @@
 #include <iostream>
 #include <dirent.h>
 #include "custom_catalog.hpp"
-#include "lexer.hpp"
-#include "command_interpreter.hpp"
-#include "command_calls.hpp"
+#include "compile/lexer.hpp"
+#include "compile/command_interpreter.hpp"
+#include "compile/db_command_calls.hpp"
+#include "compile/table_command_calls.hpp"
 class Compiler
 {
 private:
@@ -19,7 +20,7 @@ public:
     Compiler(std::string path = ".") : root_path(path)
     {
     }
-    bool query(std::string &query)
+    bool query(std::string &query,bool debugLexer = false)
     {
         std::vector<Token> tokens;
         std::string Message;
@@ -78,6 +79,46 @@ public:
             if (!calledSuccessfully)
             {
                 std::cout << "Error found in caller: " << Message << std::endl;
+                return false;
+            }
+            return true;
+        }
+        else if(command == 5){
+            bool calledSuccessfully = showTBs(tokens, Message, cata);
+            if (!calledSuccessfully)
+            {
+                std::cout << "Error found in caller: " << Message << std::endl;
+                return false;
+            }
+            return true;
+        }
+        else if(command == 6){
+            bool calledSuccessfully = showTBSchema(tokens, Message, cata);
+            if (!calledSuccessfully)
+            {
+                std::cout << "Error found in caller: " << Message << std::endl;
+                return false;
+            }
+            return true;
+        }
+        else if(command == 7){
+            bool calledSuccessfully = delTB(tokens, Message, cata);
+            if (!calledSuccessfully)
+            {
+                std::cout << "Error found in caller: " << Message << std::endl;
+                return false;
+            }
+            return true;
+        }
+        else if(command == 8){
+            bool calledSuccessfully = createTB(tokens, Message, cata);
+            if (!calledSuccessfully)
+            {
+                std::cout << "Error found in caller: " << Message << std::endl;
+                // if(debugLexer){
+                //     std::cout<<"Tokens: "<<std::endl;
+                //     Lexer.printTokens(tokens);
+                // }
                 return false;
             }
             return true;

@@ -7,15 +7,15 @@
 #include <map>
 #include <cassert>
 #include <iomanip>
-#include "my_custom_buffer_pool_manager.hpp"
-#include "schema.hpp"
-#include "filter_executor.hpp"
-#include "seq_scan_executor.hpp"
+#include "storage/my_custom_buffer_pool_manager.hpp"
+#include "types/schema.hpp"
+#include "executors/filter_executor.hpp"
+#include "executors/seq_scan_executor.hpp"
 #include "abstract_expression.hpp"
-#include "insertion_executor.hpp"
-#include "projection_executor.hpp"
-#include "update_executor.hpp"
-#include "delete_executor.hpp"
+#include "executors/insertion_executor.hpp"
+#include "executors/projection_executor.hpp"
+#include "executors/update_executor.hpp"
+#include "executors/delete_executor.hpp"
 
 /*
     catalog right now should have 2 main tasks

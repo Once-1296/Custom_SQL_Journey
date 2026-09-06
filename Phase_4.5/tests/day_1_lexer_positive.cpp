@@ -1,7 +1,7 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
-#include "lexer.hpp"
+#include "../src/compile/lexer.hpp"
 
 void runTest(lexer& lex, std::string query, const std::string& testName) {
     std::vector<Token> tokens;

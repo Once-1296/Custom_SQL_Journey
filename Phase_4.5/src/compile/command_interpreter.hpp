@@ -33,6 +33,15 @@ int identifyCommand(std::vector<Token> &tokens, std::string &Message)
         {
             return 0;
         }
+        else if (std::get<0>(secondToken) == "TABLES")
+        {
+            return 5;
+        }
+        else if (std::get<0>(secondToken) == "TABLE")
+        {
+            return 6;
+        }
+        Message = "Invalid token after SHOW";    
         return -1;
     }
     else if (std::get<0>(firstToken) == "CREATE")
@@ -48,10 +57,15 @@ int identifyCommand(std::vector<Token> &tokens, std::string &Message)
             Message = "Invalid second token.";
             return -1;
         }
-        if (std::get<0>(secondToken) == "DATABASE")
+        if(std::get<0>(secondToken) == "DATABASE")
         {
             return 1;
         }
+        else if(std::get<0>(secondToken) == "TABLE")
+        {
+            return 8;
+        }
+        Message = "Invalid Create command.";
         return -1;
     }
     else if (std::get<0>(firstToken) == "LINK")
@@ -110,6 +124,10 @@ int identifyCommand(std::vector<Token> &tokens, std::string &Message)
         if (std::get<0>(secondToken) == "DATABASE")
         {
             return 4;
+        }
+        else if (std::get<0>(secondToken) == "TABLE")
+        {
+            return 7;
         }
         return -1;
     }

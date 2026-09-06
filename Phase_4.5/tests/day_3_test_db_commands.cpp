@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cassert>
-#include "compiler.hpp"
+#include "../src/compiler.hpp"
 int main(int argc, char* argv[]) {
     std::string p = ".";
     if(argc > 1){
@@ -11,6 +11,8 @@ int main(int argc, char* argv[]) {
     Compiler compiler(p);
     std::string qry = "SHOW DATABASES;";
     assert(compiler.query(qry) == true);
+    qry = "\"SHOW\" \"DATABASES\";";
+    assert(compiler.query(qry) == false);
     qry = "CREATE DATABASE \"awwab\";";
     assert(compiler.query(qry) == true);
     assert(compiler.query(qry) == false);
