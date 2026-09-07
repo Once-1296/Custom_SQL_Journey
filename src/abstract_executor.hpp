@@ -2,6 +2,7 @@
 #define ABSTRACT_EXECUTOR_HPP
 
 #include "types/tuple.hpp"
+#include "types/value.hpp"
 #include "types/schema.hpp"
 #include "executor_context.hpp"
 #include <memory>
@@ -12,7 +13,6 @@ protected:
 
 public:
     explicit AbstractExecutor(ExecutorContext *exec_ctx) : exec_ctx_(exec_ctx) {}
-    AbstractExecutor() = default;
     virtual ~AbstractExecutor() = default;
 
     /**
