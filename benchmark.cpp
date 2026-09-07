@@ -9,8 +9,8 @@
 #include <memory>
 #include <cstdio>
 
-#include "custom_catalog.hpp"
-#include "abstract_expression.hpp"
+#include "src/custom_catalog.hpp"
+#include "src/abstract_expression.hpp"
 
 // Benchmark Metrics Helper
 struct BenchmarkResult {
