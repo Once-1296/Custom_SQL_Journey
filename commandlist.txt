@@ -1,0 +1,30 @@
+Databases:
+1. SHOW DATABASES;
+2. CREATE DATABASE "db_name";
+3. LINK DATABASE "db_name";
+4. UNLINK DATABASE;
+5. DELETE DATABASE "db_name";
+
+Tables:
+6. SHOW TABLES;
+7. SHOW TABLE SCHEMA "table_name";
+8. DELETE TABLE "table_name";
+9. CREATE TABLE "table_name" (
+"col1_name" <TYPE> <SIZE>,
+"col2_name" <TYPE> <SIZE>,
+...,
+PRIMARY KEY ("col1_name",...)
+);
+
+Queries:
+10. INSERT INTO "table_name" VALUES (<value_1>, <value_2>, ...), (...), ... ;
+
+11. SELECT "col1_name", "col2_name", ...
+FROM "table_name"
+WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;
+
+12. UPDATE "table_name" SET "col1_name" = <value_1> , "col2_name" = <value_2>, ...
+WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;
+
+13. DELETE FROM "table_name"
+WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;

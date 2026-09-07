@@ -5,6 +5,7 @@
 #include <vector>
 #include "../types/Token.hpp"
 #include "command_validation_helpers.hpp"
+#include "../custom_catalog.hpp"
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>

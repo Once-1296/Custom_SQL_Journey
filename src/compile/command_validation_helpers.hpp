@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <variant>
-
+#include <dirent.h>
 bool isAlpha(char c) { return (c <= 'z' && c >= 'a') || (c >= 'A' && c <= 'Z'); }
 bool isNum(char c) { return (c >= '0' && c <= '9'); }
 bool isUnderScore(char c) { return (c == '_'); }

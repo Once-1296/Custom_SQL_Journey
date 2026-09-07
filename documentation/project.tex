@@ -5,6 +5,8 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{tikz}
+\usepackage{alltt}
+\usepackage[normalem]{ulem}
 % Load libraries for shapes, advanced arrowheads, and relative positioning
 \usetikzlibrary{shapes.geometric, arrows.meta, positioning}
 \lstset{
@@ -28,7 +30,7 @@ I was bored in my vacation, so I thought why not learn how SQL works under the h
 
 This is torture. It was not fun.
 
-Anyways the journey is a 5 phase mess:
+Anyways the journey \sout{is a 5 phase mess} was planned as below:
 \textit{
 \begin{list}{Phase}\large
     \item{1.}{The OS background}
@@ -38,6 +40,57 @@ Anyways the journey is a 5 phase mess:
     \item{5.}{The Editor Interface}
 \end{list}
 }
+
+Currently I am at Phase 4. 
+
+\newpage
+% Motivation
+\section{Motivation}
+\paragraph{
+My main thought process was... , my main language is C++... I am a C++ larper. I thrash on Java. I am in a love-hate relationship with Python.
+I hate Javascript. And yet I have major projects in just Python, Typescript and C\#. I have mini projects in C/C++.
+I even have a couple of simple GUI projects using SFMl, written in C++. And I have an unemployed level of practice in C++ for DSA and Competitive Programming.
+But when it comes to real world low level projects, I am blank in C++.
+}
+
+\paragraph{
+So that motivated me to take this project. This is by no means a transformation from C++ Noob to Pro. 
+I still feel I'm pretty much a noob still. And this is also not a project to flex for zero LLM coding. 
+A lot of the code in the early phases is courtesy of LLMs, specifically Gemini. 
+But as I progress deeper into phases, I can write much of the base code on my own, 
+mainly needing LLMs specifically to help me debug errors that I missed, improve code cleanliness and polish the tests.
+This is a project I did, because I wanted to build something in the language I loved, something that I as a developer would enjoy.
+I focused on learning the base architecture as much as I could, and my main aim was to understand how to manage a C++ project on a large scale.
+}
+\paragraph{
+Other than that, this project also forces me to use a lot of the fancy concepts that I have been learning as an IT student.
+Stuff related to OS, DBMS, Automata Theory, etc that was mainly mugged up for exams comes up alive in code.
+Data structures like LRU, Tries, unique pointers, std::variant, map, set, stack,vector,  etc. all actually build something.
+Memory management is not just an idea, it's an actual program.
+And then there's the OOPs fundamentals like classes, enums, types, virtual classes, polymorphism, inheritance, etc.
+All of this coming together makes the journey even more sweeter.
+}
+\paragraph{
+    Why specifically SQL? I don't know. Initially I was thinking browser engine/OS but it seemed too complex, and those won't fit in my teeny average developer brain.
+    Something like a text editor/ shell related tool felt either too niche or too small for me.
+    Custom programming langauge using C++ was also an idea, but I abandoned it quickly seeing the complexity.
+    Recreating a scripting language, that too SQL, which I had recently learnt felt balanced.
+    It didn't feel too complex but not easy either. Something that would force me to learn and adapt, but not something I'd suffer learning.
+    I think I took the right decision, considering some of the times I have been most interested in this project is when I should have been studying for exams : D.
+}
+\newpage
+% Preface
+\section{Preface}
+
+\paragraph{
+    This project is divided into 5 main phases for documentation. You can check the repository readme for the distribution of phases in terms of coding.
+    The code given in documentation may not accurately match the final code, this is just to give a rough idea of our project.
+    The main purpose of this documentation is to explain why we are doing something, the high level functions that relate to it and a layman's view of the design architecture.
+    Additionally each section is written after it's coding part is almost completed, which allows me to revisit the code, and try to find bugs or weaknesses in it.
+    There are still a LOT of exploits in the code because it's a beginner level educational project, not a real world application,
+    so we dont go around managing every transistor in the hardware, but rather ensure our code is clean and correct enough from a student's learning viewpoint.
+}
+
 \newpage
 % Phase 1
 \textbf{\section{Phase 1: The OS background}}
@@ -1256,8 +1309,224 @@ public:
 \end{figure}
 
 \clearpage
-% Phase 4 : yet to come
+% Phase 4 : writing as my mst paper is in 3 - 4 hrs
 \textbf{\section{Phase 4: Automata PTSD}}
+% Phase 4 : day 1
+\subsection{Day 1 : Lexer}
+
+\paragraph{
+    This phase has one job. \newline
+    Input String $\rightarrow$  \textbf{BLACKBOX} $\rightarrow$   Output result/error.
+    This \textbf{BLACKBOX} begins with our lexer. The lexer takes in a raw string, applies a bunch of rules, and if the syntax is correct,
+    it outputs a list of tokens representing the given string. The types of tokens are few, as our language is not too complex.
+    A Token struct holds the type and associated value of the token. Since we deal with only INT and VARCHAR, our Token struct holds the value as a variant of the two types.
+    For operators we have gone with the comparison operators, the 4 basic arithmetic operators, 3 boolean operators (! AND OR)
+    and 2 string operators (STARTSWITH for prefix matching and ENDSWITH for suffix matching). The keywords are ones necessary for the set of commands decided which are mentioned ahead.
+    Note instead of SELECT \*, We use SELECT ALL. I took this liberty, because otherwise my brain was going boom.
+    Aside from Keywords and operators, we have STR which can be column Name, INT for integers, FORCE\_STR for strictly treating tokens as a user string. (enclosed in double quotes),
+    and COMMA and normal brackets (). Thankfully There isnt a need for more fancy symbols like square or curly brackets.
+    A query must always end on \;, and some small checks like extra spaces are handled within lexer as well.
+    The lexer follows a stack like approach often choosing what to do based on the previous character. Only for negative numbers it has to look ahead.
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+\\ keywords
+const char *KEYWORDS[] = {
+    "SHOW", "CREATE", "LINK", "UNLINK", "DELETE",
+    "SCHEMA", "PRIMARY", "KEY",
+    "TABLE", "TABLES", "DATABASE", "DATABASES",
+    "INSERT", "INTO", "UPDATE", "SET",
+    "SELECT", "FROM", "WHERE", "AS",
+    "ALL", "VALUES", "INT", "VARCHAR"
+};
+
+\\operators
+const char* OPERATORS[] = {
+    ">", "<", "=",">=", "<=",
+    "!=", "STARTSWITH", "ENDSWITH",
+    "+", "-", "*", "/", "!", 
+    "AND", "OR"
+};
+\\ token types
+enum tokenType{
+    STR,
+    INT,
+    KEYWORD,
+    OPERATOR,
+    BRACKET_OPEN,
+    BRACKET_CLOSE,
+    COMMA,
+    FORCE_STR
+};
+\\token
+struct Token{
+    tokenType type;
+    std::variant<std::string,int> value;
+};
+\\ trie for keyword parsing
+class tokenTrie {
+private:
+    tokenTrie* children[26];
+    std::optional<Token> value;
+
+public:
+    tokenTrie();\\ initilise children to nullptrs
+    
+    tokenTrie(Token s); \\ initilise children to nullptrs
+    
+    ~tokenTrie(); \\ deletes children recursively
+    
+    void insert(const char* keyword, Token& token);
+       \\ inserts a keyword in the trie
+    
+    const tokenTrie* getChild(int i) const;
+       \\ returns a child
+    const std::optional<Token> getValue() const;
+        \\ return associated value;
+};
+
+\\ lexer class
+
+class lexer
+{
+private:
+    tokenTrie *root;
+    // helper functions
+    bool isCaps(char c);
+    bool isAlpha(char c);
+    bool isNum(char c);
+    bool isUnderScore(char c);
+    bool isAlphaNumUS(char c);
+    bool isOperator(char c);
+public:
+    lexer(); \\ initialise keywords trie
+
+    ~lexer(); \\ delete memory used
+
+    void printTokens(const std::vector<Token> &tokens); \\ helper for debugging
+    bool lex(std::string query, std::vector<Token> &tokens, std::string &Message); \\ master function
+}
+\end{lstlisting}
+\newpage
+% Phase 4 : day 2
+\subsection{Day 2 : Commands list and setup}
+\paragraph{
+    In previous phases, we went by building one component of the section entirely and then moving to the next.
+    This time it's not feasible. Instead we'll be working by building a few commands at a time.
+    Our main entry point this phase is the compiler class.
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+\\ main entry point
+class Compiler
+{
+private:
+    \\ important objects
+    DIR *dir;
+    struct dirent *entry;
+    std::string root_path = ".";
+    catalog *cata = nullptr;
+    lexer Lexer;
+
+public:
+    Compiler(std::string path = ".") : root_path(path); \\ sets location
+    ~Compiler(); \\delete resources
+    bool query(std::string &query); \\ main function
+}
+\end{lstlisting}
+
+\paragraph{Pipeline and Commands}
+The \textbf{BLACKBOX} that I mentioned earlier is basically : 
+Compiler to Lexer to Compiler to Interpreter to Compiler to Command Calls to Compiler.
+Compiler sends the query one by one to Lexer, Interpreter and Caller.
+It proceeds to the next only if the previous one succeeds.
+That is, a proper command is:
+\begin{enumerate}
+    \item Parsed into tokens correctly by lexer.
+    \item Correctly identified given by Interpreter (like CREATE, DELETE, etc.).
+    \item Executed successfully with the expected output by Caller.
+\end{enumerate}
+
+Our list of commands is as follows:
+
+\textbf{Databases:}
+\begin{alltt}
+1. SHOW DATABASES;
+2. CREATE DATABASE "db\_name";
+3. LINK DATABASE "db\_name";
+4. UNLINK DATABASE;
+5. DELETE DATABASE "db\_name";
+\end{alltt}
+
+\textbf{Tables:}
+\begin{alltt}
+6. SHOW TABLES;
+7. SHOW TABLE SCHEMA "table\_name";
+8. DELETE TABLE "table\_name";
+9. CREATE TABLE "table\_name" (
+    "col1\_name" <TYPE> <SIZE>,
+    "col2\_name" <TYPE> <SIZE>,
+    ...,
+    PRIMARY KEY ("col1\_name",...)
+);
+\end{alltt}
+
+\textbf{Queries:}
+\begin{alltt}
+10. INSERT INTO "table\_name" VALUES (<value\_1>, <value\_2>, ...), (...), ... ;
+
+11. SELECT "col1\_name", "col2\_name", ...
+FROM "table\_name"
+WHERE <clause\_1> <conjuction> <clause\_2> <conjuction> <clause\_3> ... ;
+
+12. UPDATE "table\_name" SET "col1\_name" = <value\_1> , "col2\_name" = <value\_2>, ...
+WHERE <clause\_1> <conjuction> <clause\_2> <conjuction> <clause\_3> ... ;
+
+13. DELETE FROM "table\_name"
+WHERE <clause\_1> <conjuction> <clause\_2> <conjuction> <clause\_3> ... ;
+\end{alltt}
+
+\paragraph{
+    Our Interpreter is basically a single function, that returns -1 if no valid command is matching or returns some non negative integer.
+    As we have 13 commands, they are represented by indices 0 to 12 for simplicity. The Interpreter looks for certain keywords and parts to quickly identify a command,
+    while the actual caller does the deep parsing to guarantee that the list of tokens is valid logic.
+    It also deals with whether or not the command actually makes sense. For example, you cannot delete what doesn't exist, nor create duplicates.
+    You will notice by now, that all calls sent by compiler pass a string reference (Message). and most calls are boolean functions, with the Interpreter call's false result being -1 basically.
+    This allows for easily pinpointing an error and finding the relevant message that may have caused it. 
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+int identifyCommand(std::vector<Token> &tokens, std::string &Message); \\ Interpreter function
+\\ commands 0 to 4
+bool showDBs(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path); \\ list databases (.db files) in path
+bool createDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path); \\ create a database (.db file)
+bool linkDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path, catalog *&cata); \\ Link to a database (set catalog pointer to it)
+bool unlinkDB(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ Unlink Database, delete catlog pointer
+bool delDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path, catalog *&cata); \\ Deletea database (.db file)
+\end{lstlisting}
+
+\paragraph{
+    We use a bunch of helper functions for repetive tasks, like checking if a file exists, validating a string etc.
+    Today we completed the first 5 functions which where relatively simple, and their descriptions are given above. I suggest checking the tests for a better idea.
+}
+\newpage
+% Phase 4 : day 3
+\subsection{Day 3 : Table commands}
+\paragraph{
+    This part deals with the commands in indices in 5 to 8, mainly dealing with table metadata manipulation.
+    I kept it relatively simple with only 4 commands, list all tables, list a table schema, and creating and deleting tables.
+    The main enforcement here was ensuring that the table and columns use valid characters (alphanumeric + underscore) and are not longer than the limits defined
+    by our previous catalog logic. Each of these command has a topmost check to ensure we are linked to a catalog object, as otherwise you cannot access the tables of an imaginary database.
+    Once our caller successfully determines that the syntax was correct and the logic was valid, we can just use the functions in our catalog class for each of the 4 commands.
+    A small UI adjustment was needed just to display types as VARCHAR/INT as our catalog class returned 0/1 instead.
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+bool showTBs(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ list tables of existing db
+bool showTBSchema(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ list a table schema if it exists
+bool delTB(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ delete a table after checking for existence
+bool createTB(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ create a table by extracting schema from tokens
+\end{lstlisting}
 
 
 \end{document}
