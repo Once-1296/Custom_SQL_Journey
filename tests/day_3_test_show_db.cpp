@@ -1,6 +1,6 @@
 #include <iostream>
 #include <cassert>
-#include "compiler.hpp"
+#include "../src/compiler.hpp"
 int main(int argc, char* argv[]) {
     std::string p = ".";
     if(argc > 1){
