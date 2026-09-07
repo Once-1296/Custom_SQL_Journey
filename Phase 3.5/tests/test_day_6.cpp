@@ -1,7 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <vector>
-#include "custom_catalog.hpp"
+#include "../src/custom_catalog.hpp"
 
 int main()
 {
@@ -165,6 +165,6 @@ int main()
         print_table(tab_schema, res);
     }
     std::cout<<"All tests Passed !"<<std::endl;
-    // std::remove(filename.c_str());
+    std::remove(filename.c_str());
     return 0;
 }

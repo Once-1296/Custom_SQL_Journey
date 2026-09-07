@@ -1,7 +1,7 @@
 #ifndef SEQ_SCAN_EXECUTOR_HPP
 #define SEQ_SCAN_EXECUTOR_HPP
 
-#include "abstract_executor.hpp"
+#include "../abstract_executor.hpp"
 
 class SeqScanExecutor : public AbstractExecutor {
 private:

@@ -1,8 +1,8 @@
 #ifndef ABSTRACT_EXECUTOR_HPP
 #define ABSTRACT_EXECUTOR_HPP
 
-#include "tuple.hpp"
-#include "schema.hpp"
+#include "types/tuple.hpp"
+#include "types/schema.hpp"
 #include "executor_context.hpp"
 #include <memory>
 

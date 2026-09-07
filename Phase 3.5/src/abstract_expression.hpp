@@ -4,8 +4,8 @@
 #include <iostream>
 #include <cstdint>
 #include <memory>
-#include "tuple.hpp"
-#include "value.hpp"
+#include "types/tuple.hpp"
+#include "types/value.hpp"
 
 class AbstractExpression
 {
