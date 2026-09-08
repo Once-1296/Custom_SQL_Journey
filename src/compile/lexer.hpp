@@ -22,7 +22,7 @@ private:
 
     bool isOperator(char c)
     {
-        char ops[] = {'+', '-', '*', '/', '>', '<', '=', '!'};
+        char ops[] = {'+', '-', '*', '/', '>', '<', '=', '!', '&', '|', '~', '^'};
         for (auto &o : ops)
             if (c == o)
                 return true;
@@ -168,7 +168,11 @@ public:
             {
                 if (c == '"')
                 {
-                    if (!push(true)) { error = true; break; }
+                    if (!push(true))
+                    {
+                        error = true;
+                        break;
+                    }
                     isInQuotes = false;
                 }
                 else
@@ -210,11 +214,19 @@ public:
             }
             else if (c == ' ')
             {
-                if (!push()) { error = true; break; }
+                if (!push())
+                {
+                    error = true;
+                    break;
+                }
             }
             else if (c == ',')
             {
-                if (!push()) { error = true; break; }
+                if (!push())
+                {
+                    error = true;
+                    break;
+                }
                 tokens.push_back({tokenType::COMMA, ","});
             }
             else if (c == '(')
@@ -237,12 +249,20 @@ public:
                     break;
                 }
                 bracketCount--;
-                if (!push()) { error = true; break; }
+                if (!push())
+                {
+                    error = true;
+                    break;
+                }
                 tokens.push_back({tokenType::BRACKET_CLOSE, ")"});
             }
             else if (isOperator(c))
             {
-                if (!push()) { error = true; break; }
+                if (!push())
+                {
+                    error = true;
+                    break;
+                }
                 if (!tokens.empty())
                 {
                     Token tp = tokens.back();
@@ -261,9 +281,12 @@ public:
                         }
                         if (!isValid)
                         {
-                            Message = "Invalid operator " + op;
-                            error = true;
-                            break;
+                            // Message = "Invalid operator " + op;
+                            // error = true;
+                            // break;
+                            // assume as two separate operators
+                            tokens.push_back({tokenType::OPERATOR, std::string(1, c)});
+                            continue;
                         }
                         tokens.pop_back();
                         tokens.push_back({tokenType::OPERATOR, op});
@@ -274,7 +297,11 @@ public:
             }
             else if (c == ';')
             {
-                if (!push()) { error = true; break; }
+                if (!push())
+                {
+                    error = true;
+                    break;
+                }
                 if (bracketCount > 0)
                 {
                     Message = "Open brackets not closed.";

@@ -55,10 +55,11 @@ int main() {
                     "Open brackets not closed.", 
                     "Negative Test 6 (Unclosed Bracket)");
 
-    // 7. Invalid composite operator
-    runNegativeTest(lex, "SELECT ALL FROM Students WHERE age => 18;", 
-                    "Invalid operator =>", 
-                    "Negative Test 7 (Invalid composite operator)");
+    // valid lexical syntax, but should be caught later
+    // // 7. Invalid composite operator
+    // runNegativeTest(lex, "SELECT ALL FROM Students WHERE age => 18;", 
+    //                 "Invalid operator =>", 
+    //                 "Negative Test 7 (Invalid composite operator)");
 
     // 8. Invalid character (using '@' since '-' is now parsed as an operator)
     runNegativeTest(lex, "CREATE TABLE my@table ( ID INT 4 );", 

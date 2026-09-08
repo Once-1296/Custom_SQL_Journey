@@ -43,6 +43,10 @@ int main() {
     runTest(lex, "SELECT ALL FROM \"Users\" WHERE name STARTSWITH \"A\";", "New Test 14 (String Operators)");
     runTest(lex, "UPDATE \"Stats\" SET score = (100 + 2) * (4 - 9);", "New Test 15 (Math Operators & Brackets)");
     runTest(lex, "INSERT INTO Marks VALUES (1, \"AB\",-100),(3, \"kl\", -901);", "New Test 16 (Negative Numbers");
+    runTest(lex, "DELETE FROM Numbers WHERE (number_1 ^ number_2) = (number_3 & number_4) | ~number_5 ;", "New Test 17 (Bitwise Operators)");
+    runTest(lex, "SELECT ALL FROM table WHERE col1 = \"val1\" AND col2 = \"val2\" OR col3 = \"val3\";", "New Test 18 (Logical operators)");
+    runTest(lex, "UPDATE SET col1 = \"val1\" WHERE !col2 AND NOT col3 = \"val2\";", "New Test 19 (Logical Operators)");
+
 
     std::cout << "                   ALL POSITIVE TESTS PASSED           \n";
     std::cout << "=======================================================\n";

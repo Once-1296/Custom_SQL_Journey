@@ -184,8 +184,8 @@ bool checkCol(int i, std::vector<Token> &tokens, std::string &Message, std::map<
             return false;
         }
         uint32_t colSize = std::get<1>(checkSize.second);
-        if(colSize < 2 || colSize  >= 256){
-            Message = "VARCHAR column size should be in [2,255] bytes size.";
+        if(colSize < 1 || colSize  >= 256){
+            Message = "VARCHAR column size should be in [1,255] bytes size.";
             return false;
         }
         curCols[colName] = {TypeId::VARCHAR, colSize, pos_i};

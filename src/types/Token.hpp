@@ -15,7 +15,8 @@ const char* OPERATORS[] = {
     ">", "<", "=",">=", "<=",
     "!=", "STARTSWITH", "ENDSWITH",
     "+", "-", "*", "/", "!", 
-    "AND", "OR"
+    "AND", "OR", "XOR", "NOT",
+    "&", "^", "|", "~"
 };
 enum tokenType{
     STR,
