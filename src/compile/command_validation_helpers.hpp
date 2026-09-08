@@ -118,6 +118,10 @@ bool isValidTableName(std::string &tableName, std::string &Message){
         Message = "Table Name is too long";
         return false;
     }
+    if(!isAlpha(tableName[0]) && !isUnderScore(tableName[0])){
+        Message = "Table Name must begin with Alphabet or Underscore.";
+        return false;
+    }
     for(auto&c:tableName){
         if(!isAlphaNumUS(c) && c!=' '){
             Message = "Invalid character " + c;
@@ -136,6 +140,10 @@ bool isValidColName(std::string &colName, std::string &Message){
     }
     if(colName.size() >= 32){
         Message = "Column Name is too long";
+        return false;
+    }
+    if(!isAlpha(colName[0]) && !isUnderScore(colName[0])){
+        Message = "Column Name must begin with Alphabet or Underscore.";
         return false;
     }
     for(auto&c:colName){
@@ -176,8 +184,8 @@ bool checkCol(int i, std::vector<Token> &tokens, std::string &Message, std::map<
             return false;
         }
         uint32_t colSize = std::get<1>(checkSize.second);
-        if(colSize < 0 || colSize  >= 256){
-            Message = "VARCHAR column size should be in [0,255] bytes size.";
+        if(colSize < 2 || colSize  >= 256){
+            Message = "VARCHAR column size should be in [2,255] bytes size.";
             return false;
         }
         curCols[colName] = {TypeId::VARCHAR, colSize, pos_i};
