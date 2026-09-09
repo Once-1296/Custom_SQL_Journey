@@ -147,7 +147,7 @@ bool createTB(std::vector<Token> &tokens, std::string &Message, catalog *&cata)
     auto check_TBName = validTokenAt(2, tokens, Message, {tokenType::STR, tokenType::FORCE_STR}, 0);
     if (!check_TBName.first)
     {
-        Message += "\n : Invalid token for DB Name.";
+        Message += "\n : Invalid token for Table Name.";
         return false;
     }
     std::string tableName = std::get<0>(check_TBName.second);
