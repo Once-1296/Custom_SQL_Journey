@@ -19,6 +19,10 @@ int main(int argc, char* argv[]) {
     assert(compiler.query(qry) == true);
     qry = "CREATE TABLE Student ( ID INT 4, Age INT 4, Name VARCHAR 20, PRIMARY KEY (ID));";
     assert(compiler.query(qry) == true);
+
+    //duplicate table name
+    qry = "CREATE TABLE Student ( ID INT 4, Age INT 4, PRIMARY KEY (ID));";
+    assert(compiler.query(qry) == false);
     qry = "SHOW TABLES;";
     assert(compiler.query(qry) == true);
     qry = "SHOW TABLE SCHEMA \"Student\";";

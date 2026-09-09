@@ -131,6 +131,10 @@ int identifyCommand(std::vector<Token> &tokens, std::string &Message)
         }
         return -1;
     }
+    else if (std::get<0>(firstToken) == "INSERT")
+    {
+        return 9;
+    }
     return -1;
 }
 
