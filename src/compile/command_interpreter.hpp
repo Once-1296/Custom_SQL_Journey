@@ -135,6 +135,10 @@ int identifyCommand(std::vector<Token> &tokens, std::string &Message)
     {
         return 9;
     }
+    else if (std::get<0>(firstToken) == "SELECT")
+    {
+        return 10;
+    }
     return -1;
 }
 

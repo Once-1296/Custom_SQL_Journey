@@ -113,6 +113,13 @@ public:
         *out_size = buffer.size();
         return result; 
     }
+    std::vector<std::string> getColNames(){
+        std::vector<std::string> colNames= {};
+        for(auto&col:columns){
+            colNames.push_back(col.name);
+        }
+        return colNames;
+    }
 };
 
 #endif

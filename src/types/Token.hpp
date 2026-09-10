@@ -8,7 +8,8 @@ const char *KEYWORDS[] = {
     "TABLE", "TABLES", "DATABASE", "DATABASES",
     "INSERT", "INTO", "UPDATE", "SET",
     "SELECT", "FROM", "WHERE", "AS",
-    "ALL", "VALUES", "INT", "VARCHAR"
+    "ALL", "VALUES", "INT", "VARCHAR",
+    "ORDERBY", "LIMIT"
 };
 
 const char* OPERATORS[] = {
