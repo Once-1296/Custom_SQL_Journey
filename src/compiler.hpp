@@ -8,6 +8,7 @@
 #include "compile/db_command_calls.hpp"
 #include "compile/table_command_calls.hpp"
 #include "compile/insert_call.hpp"
+#include "compile/select_call.hpp"
 class Compiler
 {
 private:
@@ -131,6 +132,15 @@ public:
         }
         else if(command == 9){
             bool calledSuccessfully = insertRows(tokens, Message, cata);
+            if (!calledSuccessfully)
+            {
+                std::cout << "Error found in caller: " << Message << std::endl;
+                return false;
+            }
+            return true;
+        }
+        else if(command == 10){
+            bool calledSuccessfully = selectQry(tokens, Message, cata);
             if (!calledSuccessfully)
             {
                 std::cout << "Error found in caller: " << Message << std::endl;
