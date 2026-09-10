@@ -58,11 +58,12 @@ bool selectHelper(std::vector<Token> &tokens, std::string &Message, catalog *&ca
             return true;
         }
     }
+    qryCols.clear(), outCols.clear();
     std::vector<Token> col;
     std::map<std::string, std::string> selectedCols;
     std::vector<std::string> colNames = schema->getColNames();
     std::set<std::string> colNameSet(colNames.begin(), colNames.end());
-    auto isValidCol = [&col, &selectedCols, &colNameSet]() -> bool
+    auto isValidCol = [&col, &selectedCols, &colNameSet, &qryCols, &outCols]() -> bool
     {
         if (col.size() != 1 && col.size() != 3)
         {
@@ -100,7 +101,10 @@ bool selectHelper(std::vector<Token> &tokens, std::string &Message, catalog *&ca
             return false;
         }
         selectedCols[colNm] = colVal;
+        qryCols.push_back(colNm);
+        outCols.push_back(colVal);
         col.clear();
+        return true;
     };
     for (uint32_t i = selectI + 1; i <= endI; i++)
     {
@@ -123,12 +127,6 @@ bool selectHelper(std::vector<Token> &tokens, std::string &Message, catalog *&ca
     {
         Message = "Some column in select is wrong/Empty Select.";
         return false;
-    }
-    qryCols.clear(), outCols.clear();
-    for(auto&it:selectedCols)
-    {
-        qryCols.push_back(it.first);
-        outCols.push_back(it.second);
     }
     return true;
 }
