@@ -20,4 +20,6 @@ public:
 #include "expressions/arithmetic.hpp"
 #include "expressions/string_expressions.hpp"
 #include "expressions/cnf.hpp"
+#include "expressions/bitwise.hpp"
+#include "expressions/booleans.hpp"
 #endif

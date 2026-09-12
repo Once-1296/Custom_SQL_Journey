@@ -119,4 +119,22 @@ public:
     }
 };
 
+// Represents a negation
+class NegationExpression : public AbstractExpression
+{
+private:
+    std::unique_ptr<AbstractExpression> operand_;
+public:
+    NegationExpression(std::unique_ptr<AbstractExpression> operand)
+        : operand_(std::move(operand)) {}
+
+    Value Evaluate(const Tuple *tuple, const Schema &schema) const override
+    {
+        Value result = operand_->Evaluate(tuple, schema);
+        assert(result.GetType() == TypeId::INT32 && "Unsupported types for negation operation");
+        int32_t int_value = result.AsInt32();
+        return Value(-int_value);
+    }
+}; 
+
 #endif

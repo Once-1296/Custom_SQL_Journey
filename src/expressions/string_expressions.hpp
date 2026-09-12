@@ -30,14 +30,14 @@ public:
         std::string left_str = lhs.AsVarchar(), right_str = rhs.AsVarchar();
         bool flag = 1;
         // Write your comparison logic here
-        // is left_str a prefix of right_str?
+        // is right_str a prefix of left_str?
         uint32_t l_n = left_str.size(), r_n = right_str.size(), i =0;
         for( ;i < l_n && i<r_n;i++)
         {
             flag = left_str[i] == right_str[i];
             if(!flag)break;
         }
-        flag = i == l_n;
+        flag = i == r_n;
         int32_t result = (flag) ? 1 : 0;
         return Value(result);
     }
@@ -65,14 +65,14 @@ public:
         std::string left_str = lhs.AsVarchar(), right_str = rhs.AsVarchar();
         bool flag = 1;
         // Write your comparison logic here
-        // is left_str a suffix of right_str?
+        // is right_str a suffix of left_str?
         uint32_t l_n = left_str.size(), r_n = right_str.size(), i =l_n-1, j= r_n - 1;
         for( ;i >= 0 && j>=0;i--,j--)
         {
             flag = left_str[i] == right_str[j];
             if(!flag)break;
         }
-        flag = i < 0;
+        flag = j < 0;
         int32_t result = (flag) ? 1 : 0;
         return Value(result);
     }

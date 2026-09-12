@@ -44,21 +44,46 @@ bool selectQry(std::vector<Token>&tokens, std::string &Message, catalog *&cata)
     }
     std::string tableName = std::get<0>(tokens[impInd[1]+1].value);
     std::vector<std::string> qryCols, outCols;
-    bool selectRes = selectHelper(tokens, Message, cata, fromRes.second,impInd[1]-1,qryCols, outCols, 0);
+    Schema *schem = fromRes.second;
+    bool selectRes = selectHelper(tokens, Message, cata, schem,impInd[1]-1,qryCols, outCols, 0);
     if(!selectRes){
         Message += "\n : error near SELECT";
         return false;
     }
-    auto qryRes = cata->Query(tableName,qryCols,std::move(std::make_unique<ConstantValueExpression>(ConstantValueExpression(1))),outCols);
+    uint32_t p_i = impInd[1] + 1;
+    std::unique_ptr<AbstractExpression> whereClause = std::make_unique<ConstantValueExpression>(ConstantValueExpression(Value(1)));
+    if(impInd[2] != bigNum)
+    {
+        if(impInd[2] != p_i + 1)
+        {
+            Message = "Unexpected tokens between FROM and WHERE.";
+            return false;
+        }
+        uint32_t start_i = impInd[2] + 1;
+        uint32_t end_i = tokens.size() - 1;
+        if(impInd[3] != bigNum)
+        {
+            end_i = impInd[3] - 1;
+        }
+        if(end_i < start_i)
+        {
+            Message = "Illegal WHERE clause.";
+            return false;
+        }
+        std::unique_ptr<AbstractExpression> wC = std::move(whereHelper(tokens, Message,schem, start_i, end_i));
+        if(wC == nullptr)
+        {
+            Message += "\n :  Issue in WHERE clause.";
+        }
+        whereClause = std::move(wC);
+    }
+    auto qryRes = cata->Query(tableName,qryCols,std::move(whereClause),outCols);
     if(!std::get<0>(qryRes)){
         Message = "Error in executing select query.";
         return false;
     }
     Schema outSchema = std::get<1>(qryRes);
     std::vector<Tuple> qryRows = std::get<2>(qryRes);
-    if(impInd[2] != bigNum){
-        // TODO: Where clause work
-    }
     if(impInd[3] != bigNum){
         // TODO: Orderby clause work
     }
