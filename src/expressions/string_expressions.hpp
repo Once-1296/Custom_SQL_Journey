@@ -66,7 +66,7 @@ public:
         bool flag = 1;
         // Write your comparison logic here
         // is right_str a suffix of left_str?
-        uint32_t l_n = left_str.size(), r_n = right_str.size(), i =l_n-1, j= r_n - 1;
+        int32_t l_n = left_str.size(), r_n = right_str.size(), i =l_n-1, j= r_n - 1;
         for( ;i >= 0 && j>=0;i--,j--)
         {
             flag = left_str[i] == right_str[j];

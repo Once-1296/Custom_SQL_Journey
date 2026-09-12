@@ -194,6 +194,16 @@ std::unique_ptr<AbstractExpression> whereHelper(std::vector<Token> &tokens, std:
             return nullptr;
         }
     }
+    while(!stk.empty())
+    {
+        if(stk.top().second == "(")
+        {
+            Message = "Open brackets not closed.";
+            return nullptr;
+        }
+        postOrder.push_back(stk.top().first);
+        stk.pop();
+    }
     std::stack<std::pair<std::unique_ptr<AbstractExpression>, TypeId>> mainSTK;
     for(auto&tok:postOrder)
     {

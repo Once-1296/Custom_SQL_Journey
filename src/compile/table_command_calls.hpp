@@ -291,7 +291,7 @@ bool createTB(std::vector<Token> &tokens, std::string &Message, catalog *&cata)
         bool c_is_candidate_key = (primaryKeys.contains(it.first));
         Column col(cname, ctype, clength, coffset, c_is_candidate_key);
         cols[std::get<2>(it.second)] = col;
-        delete cname;
+        delete[] cname;
     }
     Schema schema(cols);
     cata->createTable(tableName, schema);

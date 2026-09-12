@@ -65,6 +65,10 @@ bool selectQry(std::vector<Token>&tokens, std::string &Message, catalog *&cata)
         {
             end_i = impInd[3] - 1;
         }
+        if(impInd[4] != bigNum)
+        {
+            end_i = std::min(end_i, impInd[4] - 1);
+        }
         if(end_i < start_i)
         {
             Message = "Illegal WHERE clause.";
