@@ -1,5 +1,5 @@
-#ifndef EXPRESSIONS_ARITHMETIC_HPP
-#define EXPRESSIONS_ARITHMETIC_HPP
+#ifndef EXPRESSIONS_BITWISE_HPP
+#define EXPRESSIONS_BITWISE_HPP
 
 #include <cstdint>
 #include <memory>

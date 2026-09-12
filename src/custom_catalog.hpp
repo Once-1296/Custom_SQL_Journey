@@ -39,7 +39,8 @@ struct TableData
     TableData(char *name, uint32_t first_page_id, uint32_t rows, Schema schema, uint32_t schema_page_id, uint32_t column_count) : first_page_id_(first_page_id),
                                                                                                                                   rows_(rows), schema_(schema), schema_page_id_(schema_page_id), column_count_(column_count)
     {
-        std::strncpy(name_, name, sizeof(name));
+        std::strncpy(name_, name, sizeof(name_) - 1);
+        name_[sizeof(name_) - 1] = '\0';
     };
 };
 
@@ -114,7 +115,8 @@ public:
             return false;
 
         char name[64];
-        std::strncpy(name, tableName.c_str(), 63);
+        std::strncpy(name, tableName.c_str(), sizeof(name) - 1);
+        name[sizeof(name) - 1] = '\0';
         uint32_t schema_page_id = bpm_->NewPage();
         uint32_t column_count = schema.GetColumnCount();
         uint32_t first_page_id = bpm_->NewPage();
@@ -573,52 +575,58 @@ void print_table(const Schema &schema, const std::vector<Tuple> &vec, bool isSch
     if (n == 0)
         return;
 
-    // Print top border
-    std::cout << "+";
-    for (uint32_t i = 0; i < n; i++)
-        std::cout << std::string(34, '-') << "+";
-    std::cout << "\n|";
-
-    // Print column headers
-    for (uint32_t i = 0; i < n; i++)
+    // Keep each section narrow enough for a typical terminal. Print all rows
+    // for one section before continuing with the next set of columns.
+    constexpr uint32_t columns_per_section = 3;
+    for (uint32_t first_col = 0; first_col < n; first_col += columns_per_section)
     {
-        std::cout << " " << std::left << std::setw(32) << schema.GetColumn(i).name << " |";
-    }
+        uint32_t end_col = first_col + columns_per_section;
+        if (end_col > n)
+            end_col = n;
 
-    // Print separator
-    std::cout << "\n+";
-    for (uint32_t i = 0; i < n; i++)
-        std::cout << std::string(34, '-') << "+";
-    std::cout << "\n";
+        std::cout << "+";
+        for (uint32_t i = first_col; i < end_col; i++)
+            std::cout << std::string(34, '-') << "+";
+        std::cout << "\n|";
 
-    // Print rows
-    for (const auto &tuple : vec)
-    {
-        std::cout << "|";
-        for (uint32_t i = 0; i < n; i++)
-        {
-            const Column &col = schema.GetColumn(i);
-            if (col.type == TypeId::INT32)
-            {
-                if(isSchemaPrint && i==2){
-                    std::string colType = (tuple.GetInt32(schema, i) == 0) ? "VARCHAR" : "INT";
-                    std::cout << " " << std::left << std::setw(32) << colType << " |";
-                }
-                else std::cout << " " << std::left << std::setw(32) << tuple.GetInt32(schema, i) << " |";
-            }
-            else
-            {
-                std::cout << " " << std::left << std::setw(32) << tuple.GetVarchar(schema, i) << " |";
-            }
-        }
+        for (uint32_t i = first_col; i < end_col; i++)
+            std::cout << " " << std::left << std::setw(32) << schema.GetColumn(i).name << " |";
+
+        std::cout << "\n+";
+        for (uint32_t i = first_col; i < end_col; i++)
+            std::cout << std::string(34, '-') << "+";
         std::cout << "\n";
-    }
 
-    // Print bottom border
-    std::cout << "+";
-    for (uint32_t i = 0; i < n; i++)
-        std::cout << std::string(34, '-') << "+";
-    std::cout << "\n";
+        for (const auto &tuple : vec)
+        {
+            std::cout << "|";
+            for (uint32_t i = first_col; i < end_col; i++)
+            {
+                const Column &col = schema.GetColumn(i);
+                if (col.type == TypeId::INT32)
+                {
+                    if(isSchemaPrint && i==2){
+                        std::string colType = (tuple.GetInt32(schema, i) == 0) ? "VARCHAR" : "INT";
+                        std::cout << " " << std::left << std::setw(32) << colType << " |";
+                    }
+                    else std::cout << " " << std::left << std::setw(32) << tuple.GetInt32(schema, i) << " |";
+                }
+                else
+                {
+                    std::cout << " " << std::left << std::setw(32) << tuple.GetVarchar(schema, i) << " |";
+                }
+            }
+            std::cout << "\n";
+        }
+
+        std::cout << "+";
+        for (uint32_t i = first_col; i < end_col; i++)
+            std::cout << std::string(34, '-') << "+";
+        std::cout << "\n";
+
+        if (end_col < n)
+            std::cout << "\n";
+    }
 }
 
 #endif

@@ -15,7 +15,7 @@ const char *KEYWORDS[] = {
 const char* OPERATORS[] = {
     ">", "<", "=",">=", "<=",
     "!=", "STARTSWITH", "ENDSWITH",
-    "+", "-", "*", "/", "!", 
+    "+", "-", "*", "/", "!", "SUB",
     "AND", "OR", "XOR", "NOT",
     "&", "^", "|", "~"
 };
