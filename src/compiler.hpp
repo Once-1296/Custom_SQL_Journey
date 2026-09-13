@@ -9,6 +9,8 @@
 #include "compile/table_command_calls.hpp"
 #include "compile/insert_call.hpp"
 #include "compile/select_call.hpp"
+#include "compile/delete_call.hpp"
+#include "compile/update_call.hpp"
 class Compiler
 {
 private:
@@ -37,7 +39,7 @@ public:
             std::cout << "Error found in lexer: " << Message << std::endl;
             return false;
         }
-        int command = identifyCommand(tokens, Message);
+        int32_t command = identifyCommand(tokens, Message);
         std::cout << "Command id: "<<command<<std::endl;
         if (command == -1)
         {
@@ -141,6 +143,24 @@ public:
         }
         else if(command == 10){
             bool calledSuccessfully = selectQry(tokens, Message, cata);
+            if (!calledSuccessfully)
+            {
+                std::cout << "Error found in caller: " << Message << std::endl;
+                return false;
+            }
+            return true;
+        }
+        else if(command == 11){
+            bool calledSuccessfully = deleteQry(tokens, Message, cata);
+            if (!calledSuccessfully)
+            {
+                std::cout << "Error found in caller: " << Message << std::endl;
+                return false;
+            }
+            return true;
+        }
+        else if(command == 12){
+            bool calledSuccessfully = updateQry(tokens, Message, cata);
             if (!calledSuccessfully)
             {
                 std::cout << "Error found in caller: " << Message << std::endl;

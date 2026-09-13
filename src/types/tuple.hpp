@@ -7,6 +7,7 @@
 #include <cstring>
 #include <cstdint>
 #include <cassert>
+#include <algorithm>
 #include "schema.hpp"
 
 // Uniquely identifies a physical record on disk
@@ -113,5 +114,44 @@ public:
         return std::string(start, actual_len);
     }
 };
+
+
+bool tupleSort(std::vector<Tuple> &tuples, std::vector<std::pair<uint32_t, uint32_t>>&order, Schema *&schema, std::string &Message)
+{
+    try{
+        std::sort(tuples.begin(), tuples.end(),[&schema, &order](const Tuple &A, const Tuple &B)->bool{
+            for(uint32_t i = 0; i < order.size();i++)
+            {
+                uint32_t cInd = order[i].first, option = order[i].second;
+                TypeId type = schema->GetColumn(cInd).type;
+                if(type == TypeId::INT32)
+                {
+                    int32_t av = A.GetInt32(*schema, cInd);
+                    int32_t bv = B.GetInt32(*schema, cInd);
+                    if(av != bv || i + 1 == order.size())
+                    {
+                        return (option == 0) ? av < bv : av > bv;
+                    }
+                }
+                else
+                {
+                    std::string av = A.GetVarchar(*schema, cInd);
+                    std::string bv = B.GetVarchar(*schema, cInd);
+                    if(av != bv || i + 1 == order.size())
+                    {
+                        return (option == 0) ? av < bv : av > bv;
+                    }
+                }
+            }
+            return false;
+        });
+    }
+    catch(...)
+    {
+        Message = "Unexpected error in sorting rows.";
+        return false;
+    }
+    return true;
+}
 
 #endif

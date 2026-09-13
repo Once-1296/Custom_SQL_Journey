@@ -13,8 +13,8 @@ bool isNum(char c) { return (c >= '0' && c <= '9'); }
 bool isUnderScore(char c) { return (c == '_'); }
 bool isAlphaNumUS(char c) { return isAlpha(c) || isNum(c) || isUnderScore(c); }
 
-std::pair<bool, std::variant<std::string, int>> validTokenAt(int i, std::vector<Token> &tokens,
-                                                             std::string &Message, std::vector<tokenType> matchTypes, int matchInd = -1, bool chkValue = false, std::variant<std::string, int> matchValue = "")
+std::pair<bool, std::variant<std::string, int>> validTokenAt(int32_t i, std::vector<Token> &tokens,
+                                                             std::string &Message, std::vector<tokenType> matchTypes, int32_t matchInd = -1, bool chkValue = false, std::variant<std::string, int> matchValue = "")
 {
     if (i < 0 || i >= tokens.size())
     {
@@ -155,7 +155,7 @@ bool isValidColName(std::string &colName, std::string &Message){
     return true;
 }
 
-bool checkCol(int i, std::vector<Token> &tokens, std::string &Message, std::map<std::string, std::tuple<TypeId, uint32_t, uint32_t>> &curCols, int pos_i)
+bool checkCol(int32_t i, std::vector<Token> &tokens, std::string &Message, std::map<std::string, std::tuple<TypeId, uint32_t, uint32_t>> &curCols, int32_t pos_i)
 {
     std::string colName = std::get<0>(tokens[i].value);
     bool checkColName = isValidColName(colName, Message);
@@ -193,6 +193,55 @@ bool checkCol(int i, std::vector<Token> &tokens, std::string &Message, std::map<
     }
     Message = "Invalid  Type specifier.";
     return false;
+}
+
+std::pair<bool, Value> checkVal(Token &tok, std::string &Message, Schema *&schema, std::string &colNm)
+{
+    // checks if a token is valid as a value for a column
+    // fetch column first
+    std::vector<std::string> colNames = schema->getColNames();
+    uint32_t ci = colNames.size();
+    for(uint32_t i = 0; i<colNames.size();i++)
+    {
+        if(colNames[i] == colNm)
+        {
+            ci = i;
+            break;
+        }
+    }
+    if(ci == colNames.size())
+    {
+        Message = "Column name is not found.";
+        return {false, Value(0)};
+    }
+    const Column col = schema->GetColumn(ci);
+    if(col.type == TypeId::INT32)
+    {
+        if(tok.type == tokenType::INT)
+        {
+            int32_t num = std::get<1>(tok.value);
+            return {true, Value(num)};
+        }
+        Message = "Expected INT Token.";
+        return {false,Value(0)};
+    }
+    else if(col.type == TypeId::VARCHAR)
+    {
+        if(tok.type == tokenType::FORCE_STR)
+        {
+            std::string str = std::get<0>(tok.value);
+            if(str.size() + 1 > col.length)
+            {
+                Message = "String is too large for column.";
+                return {false,Value(0)};
+            }
+            return {true, Value(str)};
+        }
+        Message = "Expected QUOTED_STR Token.";
+        return {false,Value(0)};
+    }
+    Message = "Undefined error near SET.";
+    return {false, Value(0)};
 }
 
 #endif

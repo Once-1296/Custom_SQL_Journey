@@ -55,7 +55,7 @@ public:
     const bool operator==(const Schema &other) const{
         if(this->tuple_size != other.tuple_size)return false;
         if(this->GetColumnCount() != other.GetColumnCount())return false;
-        for(int i = 0;i<this->GetColumnCount();i++)
+        for(uint32_t i = 0;i<this->GetColumnCount();i++)
         {
             if(this->GetColumn(i)!=other.GetColumn(i))return false;
         }
@@ -117,6 +117,20 @@ public:
         std::vector<std::string> colNames= {};
         for(auto&col:columns){
             colNames.push_back(col.name);
+        }
+        return colNames;
+    }
+    std::vector<std::string> getPrimaryColNames(){
+        std::vector<std::string> colNames= {};
+        for(auto&col:columns){
+            if(col.is_in_candidate_key)colNames.push_back(col.name);
+        }
+        return colNames;
+    }
+    std::vector<std::string> getNonPrimaryColNames(){
+        std::vector<std::string> colNames= {};
+        for(auto&col:columns){
+            if(!col.is_in_candidate_key)colNames.push_back(col.name);
         }
         return colNames;
     }

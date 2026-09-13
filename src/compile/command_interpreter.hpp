@@ -3,7 +3,7 @@
 
 #include "lexer.hpp"
 
-int identifyCommand(std::vector<Token> &tokens, std::string &Message)
+int32_t identifyCommand(std::vector<Token> &tokens, std::string &Message)
 {
     if (tokens.empty())
     {
@@ -129,6 +129,11 @@ int identifyCommand(std::vector<Token> &tokens, std::string &Message)
         {
             return 7;
         }
+        else if (std::get<0>(secondToken) == "FROM")
+        {
+            return 11;
+        }
+        Message = "Invalid DELETE Command.";
         return -1;
     }
     else if (std::get<0>(firstToken) == "INSERT")
@@ -139,6 +144,11 @@ int identifyCommand(std::vector<Token> &tokens, std::string &Message)
     {
         return 10;
     }
+    else if (std::get<0>(firstToken) == "UPDATE")
+    {
+        return 12;
+    }
+    Message = "Unidentified Command.";
     return -1;
 }
 

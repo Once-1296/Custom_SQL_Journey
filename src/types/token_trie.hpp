@@ -14,16 +14,16 @@ private:
 
 public:
     tokenTrie() {
-        for (int i = 0; i < 26; i++) children[i] = nullptr;
+        for (int32_t i = 0; i < 26; i++) children[i] = nullptr;
     }
     
     tokenTrie(Token s) {
-        for (int i = 0; i < 26; i++) children[i] = nullptr;
+        for (int32_t i = 0; i < 26; i++) children[i] = nullptr;
         value = s;
     }
     
     ~tokenTrie() {
-        for (int i = 0; i < 26; i++) {
+        for (int32_t i = 0; i < 26; i++) {
             if (children[i] != nullptr) {
                 delete children[i];
             }
@@ -35,7 +35,7 @@ public:
             this->value = token;
             return;
         }
-        int i = *keyword - 'A';
+        int32_t i = *keyword - 'A';
         assert(i >= 0 && i < 26);
         if (this->children[i] == nullptr) {
             this->children[i] = new tokenTrie();
@@ -43,7 +43,7 @@ public:
         this->children[i]->insert(keyword + 1, token);
     }
     
-    const tokenTrie* getChild(int i) const {
+    const tokenTrie* getChild(int32_t i) const {
         if (i < 0 || i >= 26) return nullptr;
         return children[i];
     }

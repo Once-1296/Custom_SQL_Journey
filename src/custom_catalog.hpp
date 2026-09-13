@@ -434,7 +434,7 @@ public:
         std::vector<Column> output_cols;
         for (auto &name : columns)
         {
-            int ind = -1;
+            int32_t ind = -1;
             for (uint32_t i = 0; i < col_count; i++)
             {
                 const Column &col = schema->GetColumn(i);
@@ -446,7 +446,7 @@ public:
                     break;
                 }
             }
-            if (ind == -1)
+            if (ind < 0)
                 return {false, Schema(), {}};
             target_cols.push_back(std::make_unique<ColumnValueExpression>(std::move(ColumnValueExpression(ind))));
         }
@@ -599,24 +599,43 @@ void print_table(const Schema &schema, const std::vector<Tuple> &vec, bool isSch
 
         for (const auto &tuple : vec)
         {
-            std::cout << "|";
-            for (uint32_t i = first_col; i < end_col; i++)
+            bool isDone = false;
+            for(uint32_t line_i = 0;!isDone;line_i++)
             {
-                const Column &col = schema.GetColumn(i);
-                if (col.type == TypeId::INT32)
+                isDone = true;
+                std::cout << "|";
+                for (uint32_t i = first_col; i < end_col; i++)
                 {
-                    if(isSchemaPrint && i==2){
-                        std::string colType = (tuple.GetInt32(schema, i) == 0) ? "VARCHAR" : "INT";
-                        std::cout << " " << std::left << std::setw(32) << colType << " |";
+                    const Column &col = schema.GetColumn(i);
+                    if (col.type == TypeId::INT32)
+                    {
+                        if(line_i > 0)
+                        {
+                            std::cout << " " << std::left << std::setw(32) << "" << " |";
+                        }
+                        else if(isSchemaPrint && i==2){
+                            std::string colType = (tuple.GetInt32(schema, i) == 0) ? "VARCHAR" : "INT";
+                            std::cout << " " << std::left << std::setw(32) << colType << " |";
+                        }
+                        else std::cout << " " << std::left << std::setw(32) << tuple.GetInt32(schema, i) << " |";
                     }
-                    else std::cout << " " << std::left << std::setw(32) << tuple.GetInt32(schema, i) << " |";
+                    else
+                    {
+                        std::string val = tuple.GetVarchar(schema, i);
+                        uint32_t start_i = 32*line_i;
+                        if(start_i >= val.size())
+                        {
+                            std::cout << " " << std::left << std::setw(32) << "" << " |";
+                            continue;
+                        }
+                        uint32_t end_i = std::min(uint32_t(val.size())-1, start_i + 31);
+                        std::string toPrint = val.substr(start_i, end_i-start_i+1);
+                        std::cout << " " << std::left << std::setw(32) << toPrint << " |";
+                        if(end_i < val.size() - 1)isDone = false;
+                    }
                 }
-                else
-                {
-                    std::cout << " " << std::left << std::setw(32) << tuple.GetVarchar(schema, i) << " |";
-                }
+                std::cout << "\n";
             }
-            std::cout << "\n";
         }
 
         std::cout << "+";

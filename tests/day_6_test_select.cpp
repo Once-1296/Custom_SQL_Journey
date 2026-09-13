@@ -24,7 +24,6 @@ int main(int argc, char *argv[])
         // insert
         qry = "INSERT INTO Student VALUES (7, 19, \"Aadil\"),(1, 18, \"Awwab\"), (12, 20, \"Aribah\");";
         assert(compiler.query(qry) == true);
-        std::cout << "ayo what\n";
     }
     {
         // verify
@@ -55,12 +54,12 @@ int main(int argc, char *argv[])
         qry = "CREATE TABLE OpCases (ID INT 4, Age INT 4, Score INT 4, Bonus INT 4, Flags INT 4, FirstName VARCHAR 20, City VARCHAR 20, Code VARCHAR 20, PRIMARY KEY (ID));";
         assert(compiler.query(qry) == true);
         qry = "INSERT INTO OpCases VALUES "
-              "(1, 18, 12, 5, 0, \"Aarav\", \"Delhi\", \"A1\"),"
+              "(1, 18, 12, 5, 0, \"Aadil\", \"Delhi\", \"A1\"),"
               "(2, 21, 27, 6, 1, \"Aisha\", \"Mumbai\", \"B2\"),"
               "(3, 24, 39, 7, 2, \"Bilal\", \"Pune\", \"C3\"),"
-              "(4, 28, 45, 8, 3, \"Chitra\", \"Delhi\", \"D4\"),"
-              "(5, 30, 51, 9, 4, \"Dev\", \"Chennai\", \"E5\"),"
-              "(6, 33, 57, 10, 5, \"Esha\", \"Mumbai\", \"F6\"),"
+              "(4, 28, 45, 8, 3, \"Cole\", \"Delhi\", \"D4\"),"
+              "(5, 30, 51, 9, 4, \"Danish\", \"Chennai\", \"E5\"),"
+              "(6, 33, 57, 10, 5, \"Eve\", \"Mumbai\", \"F6\"),"
               "(7, 36, 63, 11, 6, \"Farah\", \"Pune\", \"G7\"),"
               "(8, 39, 69, 12, 7, \"Gaurav\", \"Delhi\", \"H8\"),"
               "(9, 42, 75, 13, 0, \"Harsh\", \"Chennai\", \"I9\"),"
@@ -70,9 +69,9 @@ int main(int argc, char *argv[])
               "(13, 54, 24, 17, 4, \"Lina\", \"Chennai\", \"M3\"),"
               "(14, 57, 36, 18, 5, \"Mohan\", \"Mumbai\", \"N4\"),"
               "(15, 60, 48, 19, 6, \"Nadia\", \"Pune\", \"O5\"),"
-              "(16, 63, 60, 20, 7, \"Om\", \"Delhi\", \"P6\"),"
+              "(16, 63, 60, 20, 7, \"Omar\", \"Delhi\", \"P6\"),"
               "(17, 66, 72, 21, 0, \"Priya\", \"Chennai\", \"Q7\"),"
-              "(18, 69, 84, 22, 1, \"Ravi\", \"Mumbai\", \"R8\");";
+              "(18, 69, 84, 22, 1, \"Rayan\", \"Mumbai\", \"R8\");";
         assert(compiler.query(qry) == true);
     }
     {
