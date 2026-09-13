@@ -310,7 +310,7 @@ std::vector<std::pair<uint32_t, uint32_t>> orderByHelper(std::vector<Token> &tok
             {
                 return false;
             }
-            if (std::get<0>(col[1].value) == "ASC")
+            else if (std::get<0>(col[1].value) == "ASC")
             {
                 ord = 0;
             }
