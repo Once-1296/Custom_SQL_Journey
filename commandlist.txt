@@ -23,8 +23,8 @@ Queries:
 FROM "table_name"
 WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;
 
-12. UPDATE "table_name" SET "col1_name" = <value_1> , "col2_name" = <value_2>, ...
+12. DELETE FROM "table_name"
 WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;
 
-13. DELETE FROM "table_name"
+13. UPDATE "table_name" SET "col1_name" = <value_1> , "col2_name" = <value_2>, ...
 WHERE <clause_1> <conjuction> <clause_2> <conjuction> <clause_3> ... ;

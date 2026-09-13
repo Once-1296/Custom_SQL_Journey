@@ -9,7 +9,7 @@ const char *KEYWORDS[] = {
     "INSERT", "INTO", "UPDATE", "SET",
     "SELECT", "FROM", "WHERE", "AS",
     "ALL", "VALUES", "INT", "VARCHAR",
-    "ORDERBY", "LIMIT"
+    "ORDERBY", "LIMIT", "ASC", "DESC"
 };
 
 const char* OPERATORS[] = {

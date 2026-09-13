@@ -41,7 +41,7 @@ Anyways the journey \sout{is a 5 phase mess} was planned as below:
 \end{list}
 }
 
-Currently I am at Phase 4. 
+Currently I am at Phase 5. 
 
 \newpage
 % Motivation
@@ -1477,12 +1477,14 @@ Our list of commands is as follows:
 
 11. SELECT "col1\_name", "col2\_name", ...
 FROM "table\_name"
+WHERE <clause\_1> <conjuction> <clause\_2> <conjuction> <clause\_3> ... 
+ORDERBY "output_col1" <ASC/DESC>, "output_col2" <ASC/DESC>, ... 
+LIMIT <limit>;
+
+12. DELETE FROM "table\_name"
 WHERE <clause\_1> <conjuction> <clause\_2> <conjuction> <clause\_3> ... ;
 
-12. UPDATE "table\_name" SET "col1\_name" = <value\_1> , "col2\_name" = <value\_2>, ...
-WHERE <clause\_1> <conjuction> <clause\_2> <conjuction> <clause\_3> ... ;
-
-13. DELETE FROM "table\_name"
+13. UPDATE "table\_name" SET "col1\_name" = <value\_1> , "col2\_name" = <value\_2>, ...
 WHERE <clause\_1> <conjuction> <clause\_2> <conjuction> <clause\_3> ... ;
 \end{alltt}
 
@@ -1528,5 +1530,98 @@ bool delTB(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\
 bool createTB(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ create a table by extracting schema from tokens
 \end{lstlisting}
 
+% Phase 4 : day 4
+\subsection{Day 4 : Remaining commands}
+\paragraph{
+   Now as we reach the final four commands, Each one has its own header file. Some parts in commands are repeated , for example where clause so we reuse some functions.
+   \newline 1. For INSERT the logic is straight. Check if table exists, fetch it's schema, check each row against the schema, and if all are valid, insert them. If even one row is invalid, reject all.
+   \newline 2. For SELECT there are 5 parts \: SELECT, FROM, WHERE, ORDERBY and LIMIT. The first 2 are mandatory, and the rest 3 are optional.
+   First, the table's existence is checked. Then the columns in SELECT are checked (or the ALL keyword). 
+   Then a WHERE clause is made if it is provided. Reverse Polish Notation is used to convert the conditions into an expression the catalog can understand.
+   If the rows are fetched successfully, they are sorted/truncated if specified by ORDERBY/LIMIT.
+   \newline 3. For DELETE, it has only FROM and optionally WHERE. Both function the same way as in SELECT.
+   \newline 4. For UPDATE, it has 2 parts after determining the table, those being the SET and WHERE parts.
+   SET clause is checked to ensure that new values for the respective columns are valid, columns are not repeated, and no primary key columns are touched (as our catalog had set the rule.)
+   WHERE clause is optional and functions similarly like in previous commands.
+   \newline The overview of the functions is given below. 
+} \mbox{} \\
+
+\begin{lstlisting}[language=C++]
+\\ row level commands
+bool insertRows(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ inserts one or more rows
+bool selectQry(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ select query
+bool deleteQry(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ deletes one or more rows
+bool updateQry(std::vector<Token> &tokens, std::string &Message, catalog *&cata); \\ updates one or more rows
+
+\\ clause helpers
+std::pair<bool, Schema *> fromHelper(std::vector<Token> &tokens, std::string &Message, catalog *&cata, uint32_t fromI, uint32_t end_i);
+bool selectHelper(std::vector<Token> &tokens, std::string &Message, catalog *&cata, Schema *&schema, uint32_t endI, std::vector<std::string> &qryCols, std::vector<std::string> &outCols, uint32_t selectI = 0);
+std::unique_ptr<AbstractExpression> whereHelper(std::vector<Token> &tokens, std::string &Message, Schema *&schema, uint32_t start_i, uint32_t end_i);
+std::vector<std::pair<uint32_t, uint32_t>> orderByHelper(std::vector<Token> &tokens, std::string &Message, Schema *&outSchema, uint32_t start_i, uint32_t end_i);
+bool limitHelper(std::vector<Token> &tokens, std::string &Message, std::vector<Tuple> &rows, uint32_t start_i, uint32_t end_i);
+std::vector<std::pair<std::string, Value>> setHelper(std::vector<Token> &tokens, std::string &Message, Schema *&schema, uint32_t start_i, uint32_t end_i);
+
+
+\end{lstlisting}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    % Define element styles
+    startstop/.style={rectangle, rounded corners, minimum width=2.5cm, minimum height=1cm, text centered, draw=black, fill=red!15},
+    process/.style={rectangle, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=orange!15},
+    decision/.style={diamond, aspect=2, minimum width=3cm, minimum height=1cm, text centered, draw=black, fill=green!15, align=center},
+    arrow/.style={thick, ->, >=Stealth}
+]
+
+    % Place nodes sequentially downwards
+    \node (start)          [startstop] {Start};
+    \node (init)           [process, below=0.6cm of start] {Set base path to current directory/provided path.};
+    \node (query)          [process, below=0.6cm of init] {Take input query string.};
+    \node (lexer)          [decision, below=0.6cm of query] {Break down raw query string into tokens.\\ Is query valid lexical syntax?};
+    \node (interpreter)    [decision, below=0.6cm of lexer] {Is this a recognized command?};
+    \node (command_caller) [decision, below=0.6cm of interpreter] {Is this command valid according\\ to rules/current conditions?};
+    \node (execute)        [process, below=0.6cm of command_caller] {Execute and give output};
+    
+    % Place the outlier nodes
+    \node (end_node)    [startstop, left=1.2cm of init] {End}; 
+    \node (error_node)  [process, right=2.0cm of query] {Report error.};
+
+    % 1. Top vertical flow connections
+    \draw [arrow] (start) -- (init);
+    \draw [arrow] (init) -- (query);
+    
+    % Branch to End
+    \draw [arrow] (init) -- (end_node);
+
+    % 2. YES branches (moving downwards)
+    \draw [arrow] (query) -- (lexer);
+    \draw [arrow] (lexer) -- node[right] {Yes} (interpreter);
+    \draw [arrow] (interpreter) -- node[right] {Yes} (command_caller);
+    \draw [arrow] (command_caller) -- node[right] {Yes} (execute);
+
+    % 3. NO branches (routing right to error_node)
+    \draw [arrow] (lexer.east) -- ++(1.2,0) node[above, pos=0.3] {No} |- (error_node.south);
+    \draw [arrow] (interpreter.east) -- ++(1.2,0) node[above, pos=0.3] {No} |- (error_node.south);
+    \draw [arrow] (command_caller.east) -- ++(1.2,0) node[above, pos=0.3] {No} |- (error_node.south);
+
+    % 4. Error loop back to query
+    \draw [arrow] (error_node) -- (query);
+
+    % 5. Execute loop back to query (for next interactive prompt)
+    \draw [arrow] (execute.west) -- ++(-2.0,0) |- (query.west);
+
+\end{tikzpicture}
+\caption{Compiler Operation Loop}
+\label{fig:compiler_flowchart}
+\end{figure}
+
+% Phase 5 : Yayyy
+\textbf{\section{Phase 5: Making an Application}}
+
+\paragraph{
+    Although manye features and improvements can still be added like WAL, transactions, joins, foreign keys, etc.
+    I think I want to first get a real world product. And what better way than to use CMake.
+}
 
 \end{document}

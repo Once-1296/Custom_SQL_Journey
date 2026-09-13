@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <memory>
 #include <cassert>
+#include <limits>
+#include <stdexcept>
 #include <utility>
 #include "../abstract_expression.hpp"
 
@@ -29,9 +31,12 @@ public:
         // Perform an addition and return the result.
         int32_t left_int = lhs.AsInt32(), right_int = rhs.AsInt32();
 
-        // TODO: Handle overflow
-        int32_t result = left_int + right_int;
-        return Value(result);
+        int64_t result = static_cast<int64_t>(left_int) + right_int;
+        if (result > std::numeric_limits<int32_t>::max())
+            throw std::overflow_error("integer addition overflow");
+        if (result < std::numeric_limits<int32_t>::min())
+            throw std::underflow_error("integer addition underflow");
+        return Value(static_cast<int32_t>(result));
     }
 };
 
@@ -57,9 +62,12 @@ public:
         // Perform an addition and return the result.
         int32_t left_int = lhs.AsInt32(), right_int = rhs.AsInt32();
 
-        // TODO: Handle overflow
-        int32_t result = left_int - right_int;
-        return Value(result);
+        int64_t result = static_cast<int64_t>(left_int) - right_int;
+        if (result > std::numeric_limits<int32_t>::max())
+            throw std::overflow_error("integer subtraction overflow");
+        if (result < std::numeric_limits<int32_t>::min())
+            throw std::underflow_error("integer subtraction underflow");
+        return Value(static_cast<int32_t>(result));
     }
 };
 
@@ -85,9 +93,12 @@ public:
         // Perform a multiplication and return the result.
         int32_t left_int = lhs.AsInt32(), right_int = rhs.AsInt32();
 
-        // TODO: Handle overflow
-        int32_t result = left_int * right_int;
-        return Value(result);
+        int64_t result = static_cast<int64_t>(left_int) * right_int;
+        if (result > std::numeric_limits<int32_t>::max())
+            throw std::overflow_error("integer multiplication overflow");
+        if (result < std::numeric_limits<int32_t>::min())
+            throw std::underflow_error("integer multiplication underflow");
+        return Value(static_cast<int32_t>(result));
     }
 };
 
@@ -113,9 +124,11 @@ public:
         // Perform an division and return the result.
         int32_t left_int = lhs.AsInt32(), right_int = rhs.AsInt32();
 
-        // TODO: Handle overflow
-        int32_t result = left_int / right_int;
-        return Value(result);
+        if (right_int == 0)
+            throw std::invalid_argument("division by zero");
+        if (left_int == std::numeric_limits<int32_t>::min() && right_int == -1)
+            throw std::overflow_error("integer division overflow");
+        return Value(left_int / right_int);
     }
 };
 
@@ -133,6 +146,8 @@ public:
         Value result = operand_->Evaluate(tuple, schema);
         assert(result.GetType() == TypeId::INT32 && "Unsupported types for negation operation");
         int32_t int_value = result.AsInt32();
+        if (int_value == std::numeric_limits<int32_t>::min())
+            throw std::overflow_error("integer negation overflow");
         return Value(-int_value);
     }
 }; 

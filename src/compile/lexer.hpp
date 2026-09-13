@@ -73,7 +73,7 @@ public:
 
         std::stack<std::pair<char, const tokenTrie *>> st;
         bool isInQuotes = false;
-        int bracketCount = 0;
+        int32_t bracketCount = 0;
 
         // Returns false if an overflow/underflow occurs
         auto push = [&tokens, &st, &Message](bool forceString = false) -> bool
@@ -140,7 +140,7 @@ public:
             {
                 try
                 {
-                    int val = std::stoi(true_s);
+                    int32_t val = std::stoi(true_s);
                     tokens.push_back({type, val});
                 }
                 catch (const std::out_of_range &e)
@@ -193,7 +193,7 @@ public:
                 }
                 else
                 {
-                    int ind = c - 'A';
+                    int32_t ind = c - 'A';
                     const tokenTrie *next = nullptr;
                     if (st.empty())
                         next = root->getChild(ind);
