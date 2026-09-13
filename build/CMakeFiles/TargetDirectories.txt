@@ -1,7 +1,0 @@
-/home/archuserbtw/Github Projects/Custom_SQL_Journey/build/CMakeFiles/bsql.dir
-/home/archuserbtw/Github Projects/Custom_SQL_Journey/build/CMakeFiles/edit_cache.dir
-/home/archuserbtw/Github Projects/Custom_SQL_Journey/build/CMakeFiles/rebuild_cache.dir
-/home/archuserbtw/Github Projects/Custom_SQL_Journey/build/CMakeFiles/list_install_components.dir
-/home/archuserbtw/Github Projects/Custom_SQL_Journey/build/CMakeFiles/install.dir
-/home/archuserbtw/Github Projects/Custom_SQL_Journey/build/CMakeFiles/install/local.dir
-/home/archuserbtw/Github Projects/Custom_SQL_Journey/build/CMakeFiles/install/strip.dir
