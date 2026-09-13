@@ -1620,8 +1620,24 @@ std::vector<std::pair<std::string, Value>> setHelper(std::vector<Token> &tokens,
 \textbf{\section{Phase 5: Making an Application}}
 
 \paragraph{
-    Although manye features and improvements can still be added like WAL, transactions, joins, foreign keys, etc.
+    Although many features and improvements can still be added like WAL, transactions, joins, foreign keys, etc.
     I think I want to first get a real world product. And what better way than to use CMake.
+    The final two files in this project are CMakeLists.txt and main.cpp.
+    The main file uses a bunch of low level C++ magic (I used Gemini and Codex) to basiaclly create a simple editor interface.
+    Currently version 1.0.0 supports:\newline
+    bsql                     Start the interactive SQL editor in the current directory. \newline
+    bsql /path/to/directory  Start the editor with that database directory.\newline
+    bsql commands            List the 13 SQL commands.\newline
+    bsql command <1-13>      Explain one SQL command.\newline
+    bsql --version           Print the version.\newline
+    bsql --help              Show this help.\newline
+    And the editor has:\newline
+    i       enter insert mode \newline
+    Esc     return to normal mode\newline
+    :e Enter execute the current multiline query\newline
+    :q Enter quit\newline
+    The instructions for setup are given in README file. Welp that's it for now.
+    Maybe I'll extend this further. Adios Amigos.
 }
 
 \end{document}

@@ -1,0 +1,75 @@
+site_name: Custom SQL Journey
+site_description: A hand-built SQL engine in C++ — from raw bytes on disk to an interactive terminal editor.
+site_author: Awwab Wadekar
+site_url: https://once-1296.github.io/Custom_SQL_Journey/
+
+repo_url: https://github.com/Once-1296/Custom_SQL_Journey
+repo_name: Once-1296/Custom_SQL_Journey
+
+docs_dir: docs
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Intro: index.md
+  - Project Journey:
+      - Overview: journey/index.md
+      - "Phase 1 — The OS Background": journey/phase1.md
+      - "Phase 2 — The Volcano Model": journey/phase2.md
+      - "Phase 3 — The System Catalog": journey/phase3.md
+      - "Phase 4 — The Parser": journey/phase4.md
+      - "Phase 5 — The Application": journey/phase5.md
+  - Features: features.md
+  - Future Scope: future_scope.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - tables
+  - toc:
+      permalink: true

@@ -40,7 +40,7 @@ public:
             return false;
         }
         int32_t command = identifyCommand(tokens, Message);
-        std::cout << "Command id: "<<command<<std::endl;
+        // std::cout << "Command id: "<<command<<std::endl;
         if (command == -1)
         {
             std::cout << "Error found in interpreter: " << Message << std::endl;

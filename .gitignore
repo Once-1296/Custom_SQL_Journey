@@ -10,3 +10,8 @@
 *.lof
 *.bin
 live.main.tex
+*build/
+
+# MkDocs
+.venv/
+site/

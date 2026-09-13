@@ -314,7 +314,7 @@ std::vector<std::pair<uint32_t, uint32_t>> orderByHelper(std::vector<Token> &tok
             {
                 ord = 0;
             }
-            if (std::get<0>(col[1].value) == "DESC")
+            else if (std::get<0>(col[1].value) == "DESC")
             {
                 ord = 1;
             }
