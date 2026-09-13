@@ -97,10 +97,7 @@ Three new executors joined the pipeline in this phase:
 
 ---
 
-<!-- SCREENSHOT: SHOW TABLES and SHOW TABLE SCHEMA output in the terminal -->
-<div class="screenshot-placeholder">
-  📸 <strong>Screenshot coming soon</strong> — SHOW TABLES and SHOW TABLE SCHEMA output
-</div>
+![Table Metadata View](../assets/imgs/phase_3_demo.png)
 
 ---
 

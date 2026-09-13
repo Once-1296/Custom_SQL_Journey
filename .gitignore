@@ -13,5 +13,5 @@ live.main.tex
 *build/
 
 # MkDocs
-.venv/
+*.venv/
 site/

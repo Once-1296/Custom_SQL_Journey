@@ -89,10 +89,7 @@ Key design: a `std::list` (MRU front → LRU back) paired with an `unordered_map
 
 End-to-end test: write to disk → modify via BPM (mark dirty) → evict → verify data survived to disk.
 
-<!-- SCREENSHOT: Phase 1 tests passing in terminal -->
-<div class="screenshot-placeholder">
-  📸 <strong>Screenshot coming soon</strong> — Phase 1 unit tests passing
-</div>
+![Phase 1 End to End Test](../assets/imgs/phase_1_demo.png)
 
 ---
 

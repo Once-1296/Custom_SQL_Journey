@@ -22,6 +22,8 @@ It was neither easy nor fast, but every phase forced real learning: OS concepts,
 | `phase-4` | Parser: lexer (Trie), interpreter, compiler, all 13 SQL commands |
 | `phase-5` | Application: CMake build, `bsql` CLI + modal editor |
 
+*Note: Phases 3 and 4 have 2 branches, and the second one is the final implementation.*
+
 Each branch contains an `src/` folder for the phase code and a `tests/` folder for unit tests.
 
 For the full story of the journey — design decisions, code walkthroughs and architecture diagrams — refer to [`documentation/project.pdf`](documentation/project.pdf) or the [docs site](https://once-1296.github.io/Custom_SQL_Journey/).

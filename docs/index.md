@@ -61,7 +61,6 @@ Dive into the [Project Journey](journey/index.md) section for the detailed story
 
 ---
 
-<!-- SCREENSHOT: bsql interactive editor session showing a CREATE TABLE and SELECT query -->
-<div class="screenshot-placeholder">
-  📸 <strong>Screenshot coming soon</strong> — bsql interactive editor session
-</div>
+![BSQL editor showcase](assets/imgs/index_demo1.png)
+![BSQL editor showcase](assets/imgs/index_demo2.png)
+

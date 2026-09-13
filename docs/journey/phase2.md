@@ -125,10 +125,7 @@ ProjectionExecutor
 Init → Next → Next → ... → Next (EOF)
 ```
 
-<!-- SCREENSHOT: Phase 2 end-to-end pipeline test output in terminal -->
-<div class="screenshot-placeholder">
-  📸 <strong>Screenshot coming soon</strong> — Phase 2 end-to-end pipeline passing
-</div>
+![Phase 2 Volcano Model](../assets/imgs/phase_2_model.png)
 
 ---
 

@@ -127,10 +127,7 @@ bool limitHelper(...);
 
 ---
 
-<!-- SCREENSHOT: A full SELECT query with WHERE and ORDERBY in the bsql editor -->
-<div class="screenshot-placeholder">
-  📸 <strong>Screenshot coming soon</strong> — SELECT query with WHERE / ORDERBY in bsql
-</div>
+![SELECT FROM WHERE Query](../assets/imgs/phase_4_demo.png)
 
 ---
 

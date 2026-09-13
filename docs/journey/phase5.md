@@ -74,15 +74,10 @@ The semicolon `;` terminates a query; `:e` sends the buffer to the Compiler.
 
 ---
 
-<!-- SCREENSHOT: Full bsql editor session — launch screen, typing a query, result table -->
-<div class="screenshot-placeholder">
-  📸 <strong>Screenshot coming soon</strong> — full bsql editor session
-</div>
+![BSQL Editor Usage](../assets/imgs/phase_5_1.png)
+![BSQL Editor Usage](../assets/imgs/phase_5_2.png)
+![BSQL Editor Commands](../assets/imgs/phase_5_comms.png)
 
-<!-- SCREENSHOT: bsql commands output -->
-<div class="screenshot-placeholder">
-  📸 <strong>Screenshot coming soon</strong> — `bsql commands` listing all 13 commands
-</div>
 
 ---
 
