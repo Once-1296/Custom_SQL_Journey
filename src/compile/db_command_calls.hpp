@@ -8,9 +8,8 @@
 #include "../custom_catalog.hpp"
 #include <stdio.h>
 #include <string.h>
-#include <dirent.h>
 
-bool showDBs(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path)
+bool showDBs(std::vector<Token> &tokens, std::string &Message, std::filesystem::path &dir, std::string &file_path)
 {
     if (tokens.size() != 2)
     {
@@ -30,33 +29,29 @@ bool showDBs(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct 
         return false;
     }
     // Open the current directory
-    const char *path = file_path.data();
-    dir = opendir(path);
-    if (dir == NULL)
-    {
-        Message = "Unable to open directory";
+    dir = std::filesystem::path{file_path};
+    if(!std::filesystem::exists(dir)){
+        Message = "Directory doesn't exist";
         return false;
     }
-
-    // Read each entry in the directory
-    while ((entry = readdir(dir)) != NULL)
-    {
-        // Find the location of ".db" in the filename
-        char *ext = strstr(entry->d_name, ".db");
-
-        // Ensure ".db" exists and is at the very end of the filename
-        if (ext != NULL && strcmp(ext, ".db") == 0)
-        {
-            printf("%s\n", entry->d_name);
+    if(!std::filesystem::is_directory(dir)){
+        Message = "Path is not a directory";
+        return false;
+    }
+    for(auto& dirent : std::filesystem::directory_iterator{dir}){
+        const std::string itemPath = dirent.path();
+        if(itemPath.size() < 4){
+            continue;
+        }
+        std::string ext = itemPath.substr(itemPath.size()-3,3);
+        if(ext == ".db"){
+            std::cout << itemPath << std::endl;
         }
     }
-
-    // Close the directory
-    closedir(dir);
     return true;
 }
 
-bool createDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path)
+bool createDB(std::vector<Token> &tokens, std::string &Message, std::filesystem::path dir, std::string &file_path)
 {
     if (tokens.size() != 3)
     {
@@ -83,7 +78,7 @@ bool createDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct
     }
     auto db_token = check_DBName.second;
     std::string db_name = std::get<0>(db_token) + ".db";
-    auto chk = fileExists(dir, entry, file_path, db_name,Message);
+    auto chk = fileExists(dir, file_path, db_name,Message);
     bool success = chk.first;
     bool exists = chk.second;
     if(!success)return false;
@@ -94,10 +89,10 @@ bool createDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct
     }
     std::string db_path = file_path + "/" + db_name;
     catalog cata(db_path);
-    std::cout << "Succesfully created Database" + db_path << std::endl;
+    std::cout << "Succesfully created Database " + db_path << std::endl;
     return true;
 }
-bool linkDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path, catalog *&cata)
+bool linkDB(std::vector<Token> &tokens, std::string &Message, std::filesystem::path dir, std::string &file_path, catalog *&cata)
 {
     if (cata != nullptr)
     {
@@ -130,7 +125,7 @@ bool linkDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct d
     auto db_token = check_DBName.second;
     std::string db_name = std::get<0>(db_token) + ".db";
     // std::cout<<"Name :  "<<db_name<<std::endl;
-    auto chk = fileExists(dir, entry, file_path, db_name,Message);
+    auto chk = fileExists(dir, file_path, db_name,Message);
     bool success = chk.first;
     bool exists = chk.second;
     if(!success)return false;
@@ -142,7 +137,7 @@ bool linkDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct d
     std::string db_path = file_path + "/" + db_name;
     // std::cout<<"Path :  "<<db_path<<std::endl;
     cata = new catalog(db_path);
-    std::cout << "Succesfully linked to Database at" + db_path << std::endl;
+    std::cout << "Succesfully linked to Database at " + db_path << std::endl;
     return true;
 }
 bool unlinkDB(std::vector<Token> &tokens, std::string &Message, catalog *&cata)
@@ -175,7 +170,7 @@ bool unlinkDB(std::vector<Token> &tokens, std::string &Message, catalog *&cata)
     cata = nullptr;
     return true;
 }
-bool delDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct dirent *entry, std::string &file_path, catalog *&cata)
+bool delDB(std::vector<Token> &tokens, std::string &Message, std::filesystem::path dir, std::string &file_path, catalog *&cata)
 {
     if (cata != nullptr)
     {
@@ -207,7 +202,7 @@ bool delDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct di
     }
     auto db_token = check_DBName.second;
     std::string db_name = std::get<0>(db_token) + ".db";
-    auto chk = fileExists(dir, entry, file_path, db_name,Message);
+    auto chk = fileExists(dir, file_path, db_name,Message);
     bool success = chk.first;
     bool exists = chk.second;
     if(!success)return false;
@@ -218,7 +213,7 @@ bool delDB(std::vector<Token> &tokens, std::string &Message, DIR *dir, struct di
     }
     std::string db_path = file_path + "/" + db_name;
     std::remove(db_path.c_str());
-    std::cout << "Succesfully removed Database" + db_path << std::endl;
+    std::cout << "Succesfully removed Database " + db_path << std::endl;
     return true;
 }
 #endif
