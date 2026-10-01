@@ -1,7 +1,7 @@
 #ifndef COMPILER_HPP
 #define COMPILER_HPP
 #include <iostream>
-#include <dirent.h>
+#include <filesystem>
 #include "custom_catalog.hpp"
 #include "compile/lexer.hpp"
 #include "compile/command_interpreter.hpp"
@@ -14,8 +14,7 @@
 class Compiler
 {
 private:
-    DIR *dir;
-    struct dirent *entry;
+    std::filesystem::path dir;
     std::string root_path = ".";
     catalog *cata = nullptr;
     lexer Lexer;
@@ -48,7 +47,7 @@ public:
         }
         if (command == 0)
         {
-            bool calledSuccessfully = showDBs(tokens, Message, dir, entry, root_path);
+            bool calledSuccessfully = showDBs(tokens, Message, dir, root_path);
             if (!calledSuccessfully)
             {
                 std::cout << "Error found in caller: " << Message << std::endl;
@@ -57,7 +56,7 @@ public:
             return true;
         }
         else if(command == 1){
-            bool calledSuccessfully = createDB(tokens, Message, dir, entry, root_path);
+            bool calledSuccessfully = createDB(tokens, Message, dir, root_path);
             if (!calledSuccessfully)
             {
                 std::cout << "Error found in caller: " << Message << std::endl;
@@ -66,7 +65,7 @@ public:
             return true;
         }
         else if(command == 2){
-            bool calledSuccessfully = linkDB(tokens, Message, dir, entry, root_path, cata);
+            bool calledSuccessfully = linkDB(tokens, Message, dir, root_path, cata);
             if (!calledSuccessfully)
             {
                 std::cout << "Error found in caller: " << Message << std::endl;
@@ -84,7 +83,7 @@ public:
             return true;
         }
         else if(command == 4){
-            bool calledSuccessfully = delDB(tokens, Message, dir, entry, root_path, cata);
+            bool calledSuccessfully = delDB(tokens, Message, dir, root_path, cata);
             if (!calledSuccessfully)
             {
                 std::cout << "Error found in caller: " << Message << std::endl;

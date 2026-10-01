@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 #include <variant>
-#include <dirent.h>
+#include <filesystem>
 bool isAlpha(char c) { return (c <= 'z' && c >= 'a') || (c >= 'A' && c <= 'Z'); }
 bool isNum(char c) { return (c >= '0' && c <= '9'); }
 bool isUnderScore(char c) { return (c == '_'); }
@@ -76,35 +76,31 @@ std::pair<bool, std::variant<std::string, int>> validTokenAt(int32_t i, std::vec
     return {true, tok.value};
 }
 
-std::pair<bool, bool> fileExists(DIR *&dir, struct dirent *&entry, std::string &file_path, std::string db_name, std::string &Message){
+std::pair<bool, bool> fileExists(std::filesystem::path &dir, std::string &file_path, std::string db_name, std::string &Message){
     // Open the current directory
-    const char *path = file_path.data();
-    dir = opendir(path);
-    bool exists = false;
-    if (dir == NULL)
-    {
-        Message = "Unable to open directory.";
-        return {false, false};
+    dir = std::filesystem::path{file_path};
+    if(!std::filesystem::exists(dir)){
+        Message = "Directory doesn't exist";
+        return {false,false};
     }
-    // Read each entry in the directory
-    while ((entry = readdir(dir)) != NULL)
-    {
-        // Find the location of ".db" in the filename
-        char *ext = strstr(entry->d_name, ".db");
-
-        // Ensure ".db" exists and is at the very end of the filename
-        if (ext != NULL && strcmp(ext, ".db") == 0)
-        {
-            if (entry->d_name == db_name)
-            {
-                exists = true;
-                break;
+    if(!std::filesystem::is_directory(dir)){
+        Message = "Path is not a directory";
+        return {false,false};
+    }
+    for(auto& dirent : std::filesystem::directory_iterator{dir}){
+        const std::string itemPath = dirent.path();
+        if(itemPath.size() < (3 + db_name.size())){
+            continue;
+        }
+        std::string ext = itemPath.substr(itemPath.size()-3,3);
+        if(ext == ".db"){
+            std::string fileName = itemPath.substr(itemPath.size()-3-db_name.size(),db_name.size());
+            if(fileName == db_name){
+                return {true, true};
             }
         }
     }
-    // Close the directory
-    closedir(dir);
-    return {true, exists};
+    return {true,false};
 }
 
 bool isValidTableName(std::string &tableName, std::string &Message){
