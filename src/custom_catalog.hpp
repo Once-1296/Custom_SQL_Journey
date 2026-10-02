@@ -233,7 +233,7 @@ public:
                 std::string x = val.AsVarchar();
                 if (x.length() >= col.length)
                     return nullptr;
-                char strx[col.length];
+                char* strx = new char[col.length];
 
                 std::strncpy(strx, x.c_str(), sizeof(strx) - 1);
 
@@ -245,6 +245,7 @@ public:
                     return nullptr;
                 }
                 std::memcpy(buffer + offset, strx, col.length);
+                delete[] strx; // Free the allocated memory
             }
             else
                 return nullptr;

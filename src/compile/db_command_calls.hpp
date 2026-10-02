@@ -39,7 +39,7 @@ bool showDBs(std::vector<Token> &tokens, std::string &Message, std::filesystem::
         return false;
     }
     for(auto& dirent : std::filesystem::directory_iterator{dir}){
-        const std::string itemPath = dirent.path();
+        const std::string itemPath = dirent.path().string();
         if(itemPath.size() < 4){
             continue;
         }
@@ -84,10 +84,11 @@ bool createDB(std::vector<Token> &tokens, std::string &Message, std::filesystem:
     if(!success)return false;
     if (exists)
     {
-        Message = "Database already exists.";
+        Message += "\nDatabase already exists.";
         return false;
     }
     std::string db_path = file_path + "/" + db_name;
+    // std::cout<<"Path :  "<<db_path<<std::endl;
     catalog cata(db_path);
     std::cout << "Succesfully created Database " + db_path << std::endl;
     return true;
@@ -131,7 +132,7 @@ bool linkDB(std::vector<Token> &tokens, std::string &Message, std::filesystem::p
     if(!success)return false;
     if (!exists)
     {
-        Message = "Database does not exist.";
+        Message += "\nDatabase does not exist.";
         return false;
     }
     std::string db_path = file_path + "/" + db_name;
@@ -208,7 +209,7 @@ bool delDB(std::vector<Token> &tokens, std::string &Message, std::filesystem::pa
     if(!success)return false;
     if (!exists)
     {
-        Message = "Database does not exist.";
+        Message += "\nDatabase does not exist.";
         return false;
     }
     std::string db_path = file_path + "/" + db_name;

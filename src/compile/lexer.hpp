@@ -266,7 +266,7 @@ public:
                 if (!tokens.empty())
                 {
                     Token tp = tokens.back();
-                    if (tp.type == OPERATOR)
+                    if (tp.type == tokenType::OPERATOR)
                     {
                         std::string op = std::get<0>(tp.value);
                         op.push_back(c);

@@ -215,6 +215,10 @@ std::unique_ptr<AbstractExpression> whereHelper(std::vector<Token> &tokens, std:
         postOrder.push_back(stk.top().first);
         stk.pop();
     }
+    // for(auto&tok:postOrder){
+    //     if(tok.type != tokenType::INT) std::cout<<std::get<0>(tok.value)<<std::endl;
+    //     else std::cout<<std::get<1>(tok.value)<<std::endl;
+    // }
     std::stack<std::pair<std::unique_ptr<AbstractExpression>, TypeId>> mainSTK;
     for (auto &tok : postOrder)
     {

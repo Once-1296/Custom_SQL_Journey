@@ -66,7 +66,7 @@ public:
             {
                 std::string str_val = val.AsVarchar();
                 // std::cout << str_val << std::endl;
-                char strx[target_col.length];
+                char* strx = new char[target_col.length];
                 std::strncpy(strx, str_val.c_str(), sizeof(strx) - 1);
                 // Explicitly null-terminate the array
                 strx[sizeof(strx) - 1] = '\0';
@@ -74,6 +74,7 @@ public:
                 // std::cout<<target_col.length<<std::endl;
                 // Use .data() to safely access the char array pointer of the string
                 std::memcpy(tuple_buffer_.data() + target_col.offset, strx, target_col.length);
+                delete[] strx; // Free the allocated memory
             }
             else
             {

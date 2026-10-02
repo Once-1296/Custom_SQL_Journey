@@ -87,14 +87,18 @@ std::pair<bool, bool> fileExists(std::filesystem::path &dir, std::string &file_p
         Message = "Path is not a directory";
         return {false,false};
     }
+    // std::cout<<"Database Name :  "<<db_name<<std::endl;
     for(auto& dirent : std::filesystem::directory_iterator{dir}){
-        const std::string itemPath = dirent.path();
-        if(itemPath.size() < (3 + db_name.size())){
+        const std::string itemPath = dirent.path().string();
+        // std::cout<<"Item Path :  "<<itemPath<<std::endl;
+        if(itemPath.size() < (db_name.size())){
             continue;
         }
         std::string ext = itemPath.substr(itemPath.size()-3,3);
+        // std::cout<<"Extension :  "<<ext<<std::endl;
         if(ext == ".db"){
-            std::string fileName = itemPath.substr(itemPath.size()-3-db_name.size(),db_name.size());
+            std::string fileName = itemPath.substr(itemPath.size()-db_name.size(),db_name.size());
+            // std::cout<<"File Name :  "<<fileName<<std::endl;
             if(fileName == db_name){
                 return {true, true};
             }
