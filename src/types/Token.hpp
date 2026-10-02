@@ -19,7 +19,7 @@ const char* OPERATORS[] = {
     "AND", "OR", "XOR", "NOT",
     "&", "^", "|", "~"
 };
-enum tokenType{
+enum class tokenType{
     STR,
     INT,
     KEYWORD,
@@ -38,28 +38,28 @@ std::string printType(tokenType type){
     std::string res = "";
     switch (type)
     {
-    case STR:
+    case tokenType::STR:
         res  = "STR";
         break;
-    case INT:
+    case tokenType::INT:
         res  = "INT";
         break;
-    case KEYWORD:
+    case tokenType::KEYWORD:
         res  = "KEYWORD";
         break;
-    case OPERATOR:
+    case tokenType::OPERATOR:
         res  = "OPERATOR";
         break;
-    case BRACKET_OPEN:
+    case tokenType::BRACKET_OPEN:
         res  = "BRACKET_OPEN";
         break;
-    case BRACKET_CLOSE:
+    case tokenType::BRACKET_CLOSE:
         res  = "BRACKET_CLOSE";
         break;
-    case COMMA:
+    case tokenType::COMMA:
         res  = "COMMA";
         break;
-    case FORCE_STR:
+    case tokenType::FORCE_STR:
         res  = "QUOTED STR";
         break;
     default:
