@@ -94,6 +94,17 @@ sudo cmake --install .
 
 ##### Option A: Visual Studio (Developer Command Prompt / PowerShell)
 
+Pre-requisites:
+
+- Cmake: [Download link](https://cmake.org/download/)
+- Windows Powershell
+```powershell
+# run this command if any errors related to pwsh
+winget install --id Microsoft.Powershell
+```
+
+Install commands
+
 ```cmd
 mkdir build
 cd build
@@ -107,11 +118,19 @@ cmake --install . --config Release
 
 *The `bsql.exe` binary will be available inside `build/Release/bsql.exe`.*
 
-##### Option B: MinGW / MSYS2
+##### Option B: MSYS2
+
+Pre-requisites:
+
+```bash
+pacman -S --needed base-devel mingw-w64-ucrt-x86_64-toolchain cmake
+```
+
+Install commands:
 
 ```bash
 mkdir build && cd build
-cmake -G "MinGW Makefiles" ..
+cmake -G "Unix Makefiles" ..
 cmake --build .
 ```
 
