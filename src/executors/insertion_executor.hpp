@@ -61,6 +61,7 @@ public:
                 return false;
             current_page_id_ = bpm->NewPage();
             page->SetNextPageId(current_page_id_);
+            bpm->MarkDirty(previous_page_id_);
             page = bpm->FetchPage(current_page_id_);
             uint32_t out_slot_num;
             page->InsertTuple(tuple->GetData(), tuple_size, &out_slot_num);

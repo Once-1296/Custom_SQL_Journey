@@ -97,7 +97,7 @@ public:
     uint8_t *getSchemaBytes(uint32_t *out_size)
     {
         uint32_t total_cols = GetColumnCount();
-        std::vector<uint8_t>buffer(4 + 38*total_cols);
+        std::vector<uint8_t>buffer(4 + 44*total_cols);
         uint32_t offset = 0;
         std::memcpy(buffer.data() + offset, &total_cols, sizeof(total_cols));
         offset += sizeof(total_cols);
